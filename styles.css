@@ -152,6 +152,26 @@ em {
   z-index: 1;
 }
 
+/* Logo */
+.hero-logo {
+  margin-bottom: 24px;
+  animation: fadeDown 0.5s ease both;
+}
+
+.logo-img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.4));
+}
+
+.footer-logo-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .badge {
   display: inline-block;
   background: rgba(16, 185, 129, 0.1);
