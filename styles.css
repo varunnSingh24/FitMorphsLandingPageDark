@@ -265,6 +265,113 @@ em {
 }
 
 /* ═══════════════════════════════════════════
+   MICRO-WEBINAR VIDEO SECTION
+═══════════════════════════════════════════ */
+.webinar {
+  padding: 100px 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.webinar-header {
+  margin-bottom: 48px;
+}
+
+.webinar-header .section-sub {
+  margin: 0 auto 0;
+}
+
+/* Video wrapper with glow */
+.video-wrapper {
+  position: relative;
+  max-width: 860px;
+  margin: 0 auto 48px;
+}
+
+.video-border-glow {
+  position: absolute;
+  inset: -3px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--accent), #d97706, #f59e0b, transparent 60%);
+  z-index: 0;
+  filter: blur(1px);
+}
+
+.video-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding-top: 56.25%;
+  /* 16:9 */
+  border-radius: 18px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(245, 158, 11, 0.15);
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Duration badge */
+.video-duration-badge {
+  position: absolute;
+  top: -14px;
+  right: 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #000;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 6px 16px;
+  border-radius: 100px;
+  z-index: 2;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+}
+
+/* Checklist */
+.webinar-checklist {
+  max-width: 640px;
+  margin: 0 auto 40px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 40px;
+  text-align: left;
+}
+
+.webinar-checklist-title {
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.webinar-checklist ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.webinar-checklist li {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.webinar-cta {
+  margin-top: 8px;
+}
+
+/* ═══════════════════════════════════════════
    METHOD — 6 CARDS
 ═══════════════════════════════════════════ */
 .method {
