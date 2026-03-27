@@ -173,6 +173,77 @@ router.put('/:id/assign', requireRole('admin', 'manager'), (req, res) => {
   res.json({ success: true });
 });
 
+// GET /api/leads/:id/medical
+router.get('/:id/medical', (req, res) => {
+  const db = getDb();
+  const { role, id: userId } = req.user;
+  const lead = db.prepare('SELECT id, assigned_to FROM leads WHERE id = ?').get(req.params.id);
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+  if (role === 'sales_agent' && lead.assigned_to !== userId) return res.status(403).json({ error: 'Access denied' });
+
+  const medical = db.prepare('SELECT * FROM medical_histories WHERE lead_id = ?').get(req.params.id);
+  res.json({ medical: medical || null });
+});
+
+// PUT /api/leads/:id/medical  (upsert)
+router.put('/:id/medical', (req, res) => {
+  const db = getDb();
+  const { role, id: userId } = req.user;
+  const lead = db.prepare('SELECT id, assigned_to FROM leads WHERE id = ?').get(req.params.id);
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+  if (role === 'sales_agent' && lead.assigned_to !== userId) return res.status(403).json({ error: 'Access denied' });
+
+  const {
+    height_cm, weight_kg, blood_group, health_conditions,
+    past_surgeries, current_medications, allergies,
+    fitness_level, dietary_preference, smoking, alcohol,
+    doctor_name, doctor_clearance,
+    emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+    additional_notes,
+  } = req.body;
+
+  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const existing = db.prepare('SELECT id FROM medical_histories WHERE lead_id = ?').get(lead.id);
+  const conditionsJson = Array.isArray(health_conditions) ? JSON.stringify(health_conditions) : (health_conditions || null);
+
+  if (existing) {
+    db.prepare(`
+      UPDATE medical_histories SET
+        height_cm=?, weight_kg=?, blood_group=?, health_conditions=?,
+        past_surgeries=?, current_medications=?, allergies=?,
+        fitness_level=?, dietary_preference=?, smoking=?, alcohol=?,
+        doctor_name=?, doctor_clearance=?,
+        emergency_contact_name=?, emergency_contact_phone=?, emergency_contact_relation=?,
+        additional_notes=?, updated_at=?
+      WHERE lead_id=?
+    `).run(height_cm||null, weight_kg||null, blood_group||null, conditionsJson,
+      past_surgeries||null, current_medications||null, allergies||null,
+      fitness_level||null, dietary_preference||null, smoking||null, alcohol||null,
+      doctor_name||null, doctor_clearance||null,
+      emergency_contact_name||null, emergency_contact_phone||null, emergency_contact_relation||null,
+      additional_notes||null, now, lead.id);
+  } else {
+    db.prepare(`
+      INSERT INTO medical_histories (lead_id, height_cm, weight_kg, blood_group, health_conditions,
+        past_surgeries, current_medications, allergies, fitness_level, dietary_preference, smoking, alcohol,
+        doctor_name, doctor_clearance, emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
+        additional_notes, created_at, updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(lead.id, height_cm||null, weight_kg||null, blood_group||null, conditionsJson,
+      past_surgeries||null, current_medications||null, allergies||null,
+      fitness_level||null, dietary_preference||null, smoking||null, alcohol||null,
+      doctor_name||null, doctor_clearance||null,
+      emergency_contact_name||null, emergency_contact_phone||null, emergency_contact_relation||null,
+      additional_notes||null, now, now);
+  }
+
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
+    .run(lead.id, userId, `Medical history updated by ${req.user.name}`);
+
+  const medical = db.prepare('SELECT * FROM medical_histories WHERE lead_id = ?').get(lead.id);
+  res.json({ medical });
+});
+
 // POST /api/leads/bulk-assign
 router.post('/bulk-assign', requireRole('admin', 'manager'), (req, res) => {
   const db = getDb();

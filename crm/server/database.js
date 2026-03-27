@@ -78,6 +78,30 @@ function initializeDatabase() {
       completed_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS medical_histories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL UNIQUE REFERENCES leads(id),
+      height_cm REAL,
+      weight_kg REAL,
+      blood_group TEXT,
+      health_conditions TEXT,
+      past_surgeries TEXT,
+      current_medications TEXT,
+      allergies TEXT,
+      fitness_level TEXT CHECK(fitness_level IN ('beginner','intermediate','advanced')),
+      dietary_preference TEXT CHECK(dietary_preference IN ('vegetarian','vegan','non_vegetarian','eggetarian','jain','other')),
+      smoking TEXT CHECK(smoking IN ('yes','no','occasionally')),
+      alcohol TEXT CHECK(alcohol IN ('yes','no','occasionally')),
+      doctor_name TEXT,
+      doctor_clearance TEXT CHECK(doctor_clearance IN ('yes','no','not_required')),
+      emergency_contact_name TEXT,
+      emergency_contact_phone TEXT,
+      emergency_contact_relation TEXT,
+      additional_notes TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   seedIfEmpty(db);
