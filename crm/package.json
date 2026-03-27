@@ -1,0 +1,13 @@
+{
+  "name": "fitmorphs-crm",
+  "version": "1.0.0",
+  "description": "FitMorphs Internal CRM",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "setup": "npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
