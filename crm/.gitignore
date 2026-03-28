@@ -1,0 +1,20 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# SQLite database
+server/fitmorphs.db
+
+# Database backups (large binary files — back these up separately)
+server/backups/
+
+# Build output
+client/dist/
+
+# Env files
+.env
+server/.env
+
+# OS
+.DS_Store
+Thumbs.db
