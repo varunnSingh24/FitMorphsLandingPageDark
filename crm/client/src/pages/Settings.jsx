@@ -46,72 +46,103 @@ export default function Settings() {
         <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
           <h2 className="font-semibold text-gray-900 text-sm">Team Members</h2>
         </div>
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="table-th">Name</th>
-              <th className="table-th">Email</th>
-              <th className="table-th">Role</th>
-              <th className="table-th">Phone</th>
-              <th className="table-th">Status</th>
-              <th className="table-th">Joined</th>
-              <th className="table-th">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading && <tr><td colSpan={7} className="table-td text-center text-gray-400 py-8">Loading...</td></tr>}
-            {users.map(u => (
-              <tr key={u.id} className={`${!u.is_active ? 'opacity-50' : ''} hover:bg-gray-50`}>
-                <td className="table-td">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold">
-                      {u.name?.[0]?.toUpperCase()}
-                    </div>
-                    <span className="font-medium text-gray-900">{u.name}</span>
+
+        {/* Mobile card list */}
+        <div className="sm:hidden divide-y divide-gray-100">
+          {loading && <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading...</div>}
+          {users.map(u => (
+            <div key={u.id} className={`px-4 py-3 space-y-2 ${!u.is_active ? 'opacity-50' : ''}`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-sky-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                    {u.name?.[0]?.toUpperCase()}
                   </div>
-                </td>
-                <td className="table-td text-gray-600">{u.email}</td>
-                <td className="table-td">
-                  <span className={`badge text-xs ${
-                    u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                    u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {ROLE_LABELS[u.role]}
-                  </span>
-                </td>
-                <td className="table-td font-mono text-xs">{u.phone || '—'}</td>
-                <td className="table-td">
-                  <span className={`badge text-xs ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {u.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="table-td text-xs text-gray-500">{formatDate(u.created_at)}</td>
-                <td className="table-td">
-                  <div className="flex items-center gap-3">
-                    <Link to={`/profile/${u.id}`} className="text-xs text-gray-500 hover:text-sky-600 hover:underline">
-                      Profile
-                    </Link>
-                    <button
-                      onClick={() => { setEditUser(u); setShowModal(true); }}
-                      className="text-xs text-sky-600 hover:underline"
-                    >Edit</button>
-                    <button
-                      onClick={() => handleToggleActive(u)}
-                      className={`text-xs ${u.is_active ? 'text-orange-600' : 'text-green-600'} hover:underline`}
-                    >
-                      {u.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(u)}
-                      className="text-xs text-red-600 hover:underline"
-                    >Delete</button>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 text-sm truncate">{u.name}</div>
+                    <div className="text-xs text-gray-400 truncate">{u.email}</div>
                   </div>
-                </td>
+                </div>
+                <span className={`badge text-xs flex-shrink-0 ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {u.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`badge text-xs ${
+                  u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                  u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
+                  'bg-gray-100 text-gray-700'
+                }`}>{ROLE_LABELS[u.role]}</span>
+                {u.phone && <span className="text-xs text-gray-400 font-mono">{u.phone}</span>}
+                <span className="text-xs text-gray-400">Joined {formatDate(u.created_at)}</span>
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <Link to={`/profile/${u.id}`} className="text-xs text-gray-500 hover:text-sky-600 hover:underline">Profile</Link>
+                <button onClick={() => { setEditUser(u); setShowModal(true); }} className="text-xs text-sky-600 hover:underline">Edit</button>
+                <button onClick={() => handleToggleActive(u)} className={`text-xs ${u.is_active ? 'text-orange-600' : 'text-green-600'} hover:underline`}>
+                  {u.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button onClick={() => handleDelete(u)} className="text-xs text-red-600 hover:underline">Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="table-th">Name</th>
+                <th className="table-th">Email</th>
+                <th className="table-th">Role</th>
+                <th className="table-th">Phone</th>
+                <th className="table-th">Status</th>
+                <th className="table-th">Joined</th>
+                <th className="table-th">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading && <tr><td colSpan={7} className="table-td text-center text-gray-400 py-8">Loading...</td></tr>}
+              {users.map(u => (
+                <tr key={u.id} className={`${!u.is_active ? 'opacity-50' : ''} hover:bg-gray-50`}>
+                  <td className="table-td">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold">
+                        {u.name?.[0]?.toUpperCase()}
+                      </div>
+                      <span className="font-medium text-gray-900">{u.name}</span>
+                    </div>
+                  </td>
+                  <td className="table-td text-gray-600">{u.email}</td>
+                  <td className="table-td">
+                    <span className={`badge text-xs ${
+                      u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                      u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>{ROLE_LABELS[u.role]}</span>
+                  </td>
+                  <td className="table-td font-mono text-xs">{u.phone || '—'}</td>
+                  <td className="table-td">
+                    <span className={`badge text-xs ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="table-td text-xs text-gray-500">{formatDate(u.created_at)}</td>
+                  <td className="table-td">
+                    <div className="flex items-center gap-3">
+                      <Link to={`/profile/${u.id}`} className="text-xs text-gray-500 hover:text-sky-600 hover:underline">Profile</Link>
+                      <button onClick={() => { setEditUser(u); setShowModal(true); }} className="text-xs text-sky-600 hover:underline">Edit</button>
+                      <button onClick={() => handleToggleActive(u)} className={`text-xs ${u.is_active ? 'text-orange-600' : 'text-green-600'} hover:underline`}>
+                        {u.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button onClick={() => handleDelete(u)} className="text-xs text-red-600 hover:underline">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showModal && (
