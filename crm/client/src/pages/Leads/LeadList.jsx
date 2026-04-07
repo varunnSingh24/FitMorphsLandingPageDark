@@ -54,6 +54,21 @@ export default function LeadList() {
     loadLeads();
   };
 
+  const handleBulkDelete = async () => {
+    if (!selected.length) return;
+    if (!window.confirm(`Delete ${selected.length} lead(s)? This cannot be undone.`)) return;
+    await api.post('/leads/bulk-delete', { lead_ids: selected });
+    setSelected([]);
+    loadLeads();
+  };
+
+  const handleDelete = async (lead, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${lead.full_name}"? This cannot be undone.`)) return;
+    await api.delete(`/leads/${lead.id}`);
+    loadLeads();
+  };
+
   const toggleAll = () => setSelected(selected.length === leads.length ? [] : leads.map(l => l.id));
   const toggleOne = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
 
@@ -113,6 +128,7 @@ export default function LeadList() {
             {users.filter(u => ['sales_agent','manager'].includes(u.role)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
           <button className="btn-primary text-xs py-1.5" onClick={handleBulkAssign} disabled={!bulkAssignTo}>Assign</button>
+          <button className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700" onClick={handleBulkDelete}>Delete</button>
           <button className="btn-secondary text-xs py-1.5" onClick={() => setSelected([])}>Cancel</button>
         </div>
       )}
@@ -171,10 +187,18 @@ export default function LeadList() {
                     {timeAgo(lead.last_activity || lead.created_at)}
                   </td>
                   <td className="table-td" onClick={e => e.stopPropagation()}>
-                    <button
-                      className="text-xs bg-sky-500 text-white px-2.5 py-1 rounded hover:bg-sky-600"
-                      onClick={() => setCallLead(lead)}
-                    >📞 Call</button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="text-xs bg-sky-500 text-white px-2.5 py-1 rounded hover:bg-sky-600"
+                        onClick={() => setCallLead(lead)}
+                      >📞 Call</button>
+                      {['admin','manager'].includes(user?.role) && (
+                        <button
+                          className="text-xs text-red-500 hover:text-red-700 hover:underline"
+                          onClick={(e) => handleDelete(lead, e)}
+                        >Delete</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
