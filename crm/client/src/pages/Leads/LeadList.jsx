@@ -106,8 +106,8 @@ export default function LeadList() {
 
       {/* Bulk actions */}
       {selected.length > 0 && ['admin', 'manager'].includes(user?.role) && (
-        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-          <span className="text-blue-700 text-sm font-medium">{selected.length} selected</span>
+        <div className="flex items-center gap-3 bg-sky-50 border border-sky-200 rounded-lg px-4 py-2">
+          <span className="text-sky-700 text-sm font-medium">{selected.length} selected</span>
           <select className="select w-48 text-sm py-1" value={bulkAssignTo} onChange={e => setBulkAssignTo(e.target.value)}>
             <option value="">Assign to agent...</option>
             {users.filter(u => ['sales_agent','manager'].includes(u.role)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -144,7 +144,7 @@ export default function LeadList() {
                 <tr><td colSpan={9} className="table-td text-center text-gray-400 py-10">No leads found</td></tr>
               )}
               {!loading && leads.map(lead => (
-                <tr key={lead.id} className={`hover:bg-gray-50 cursor-pointer ${selected.includes(lead.id) ? 'bg-blue-50' : ''}`}>
+                <tr key={lead.id} className={`hover:bg-gray-50 cursor-pointer ${selected.includes(lead.id) ? 'bg-sky-50' : ''}`}>
                   {['admin','manager'].includes(user?.role) && (
                     <td className="table-td" onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={selected.includes(lead.id)} onChange={() => toggleOne(lead.id)} className="rounded" />
@@ -172,7 +172,7 @@ export default function LeadList() {
                   </td>
                   <td className="table-td" onClick={e => e.stopPropagation()}>
                     <button
-                      className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded hover:bg-blue-700"
+                      className="text-xs bg-sky-500 text-white px-2.5 py-1 rounded hover:bg-sky-600"
                       onClick={() => setCallLead(lead)}
                     >📞 Call</button>
                   </td>

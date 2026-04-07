@@ -30,7 +30,7 @@ const HEALTH_CONDITIONS = [
 const calcBMI = (w, h) => h && w ? (parseFloat(w) / ((parseFloat(h) / 100) ** 2)).toFixed(1) : null;
 const bmiLabel = (bmi) => {
   if (!bmi) return null;
-  if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-600' };
+  if (bmi < 18.5) return { label: 'Underweight', color: 'text-sky-600' };
   if (bmi < 25)   return { label: 'Normal',       color: 'text-green-600' };
   if (bmi < 30)   return { label: 'Overweight',   color: 'text-orange-500' };
   return                  { label: 'Obese',         color: 'text-red-600' };
@@ -286,10 +286,10 @@ export default function AddLead() {
                   {HEALTH_CONDITIONS.map(({ key, label }) => (
                     <label key={key} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all text-xs ${
                       medical.health_conditions.includes(key)
-                        ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
+                        ? 'bg-sky-50 border-sky-300 text-sky-700 font-medium'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}>
-                      <input type="checkbox" className="rounded text-blue-600"
+                      <input type="checkbox" className="rounded text-sky-600"
                         checked={medical.health_conditions.includes(key)}
                         onChange={() => toggleCondition(key)}
                       />
@@ -426,7 +426,7 @@ export default function AddLead() {
 
 function SectionNumber({ number }) {
   return (
-    <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+    <div className="w-7 h-7 rounded-full bg-sky-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
       {number}
     </div>
   );

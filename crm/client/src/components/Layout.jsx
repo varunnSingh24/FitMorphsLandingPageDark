@@ -48,7 +48,7 @@ export default function Layout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                     isActive
-                      ? 'bg-blue-600 text-white font-medium'
+                      ? 'bg-sky-500 text-white font-medium'
                       : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                   }`
                 }
@@ -65,11 +65,11 @@ export default function Layout() {
           {sidebarOpen ? (
             <div className="flex items-center gap-2">
               <Link to="/profile" className="flex items-center gap-2 flex-1 min-w-0 group">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:bg-blue-400 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:bg-sky-400 transition-colors">
                   {user?.name?.[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-white text-xs font-medium truncate group-hover:text-blue-300 transition-colors">{user?.name}</div>
+                  <div className="text-white text-xs font-medium truncate group-hover:text-sky-300 transition-colors">{user?.name}</div>
                   <div className="text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</div>
                 </div>
               </Link>
@@ -79,7 +79,7 @@ export default function Layout() {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <Link to="/profile" className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold hover:bg-blue-400 transition-colors" title={user?.name}>
+              <Link to="/profile" className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold hover:bg-sky-400 transition-colors" title={user?.name}>
                 {user?.name?.[0]?.toUpperCase()}
               </Link>
               <button onClick={handleLogout} className="w-full flex justify-center text-slate-400 hover:text-white p-1 rounded" title="Logout">

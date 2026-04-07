@@ -88,7 +88,7 @@ export default function FollowUps() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <Link to={`/leads/${f.lead_id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                  <Link to={`/leads/${f.lead_id}`} className="font-medium text-gray-900 hover:text-sky-600">
                     {f.lead_name}
                   </Link>
                   <span className="ml-2">
@@ -112,7 +112,7 @@ export default function FollowUps() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => setCallLead({ id: f.lead_id, full_name: f.lead_name, phone: f.lead_phone })}
-                  className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700"
+                  className="text-xs bg-sky-500 text-white px-3 py-1.5 rounded hover:bg-sky-600"
                 >
                   📞 Call
                 </button>

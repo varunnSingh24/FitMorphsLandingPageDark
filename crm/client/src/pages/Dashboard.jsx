@@ -7,7 +7,7 @@ import { timeAgo, STATUS_COLORS, STATUS_LABELS, formatDate } from '../utils/help
 import LogCallModal from '../components/LogCallModal';
 
 const FUNNEL_COLORS = {
-  new: '#6b7280', contacted: '#3b82f6', interested: '#8b5cf6',
+  new: '#6b7280', contacted: '#0ea5e9', interested: '#8b5cf6',
   follow_up: '#f59e0b', negotiation: '#f97316', converted: '#10b981',
   lost: '#ef4444', junk: '#9ca3af',
 };
@@ -47,7 +47,7 @@ export default function Dashboard() {
 
   const statCards = [
     { label: 'Total Leads', value: stats?.total ?? 0, color: 'text-gray-900', bg: 'bg-gray-50' },
-    { label: 'New Today', value: stats?.newToday ?? 0, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'New Today', value: stats?.newToday ?? 0, color: 'text-sky-600', bg: 'bg-sky-50' },
     { label: 'Contacted', value: stats?.contacted ?? 0, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Converted', value: stats?.converted ?? 0, color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Lost', value: stats?.lost ?? 0, color: 'text-red-600', bg: 'bg-red-50' },
@@ -85,7 +85,7 @@ export default function Dashboard() {
               <div key={f.id} className="px-4 py-3 hover:bg-gray-50">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <Link to={`/leads/${f.lead_id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600 truncate block">
+                    <Link to={`/leads/${f.lead_id}`} className="text-sm font-medium text-gray-900 hover:text-sky-600 truncate block">
                       {f.lead_name}
                     </Link>
                     <div className="text-xs text-gray-500 mt-0.5 truncate">{f.note || 'Follow up required'}</div>
@@ -93,7 +93,7 @@ export default function Dashboard() {
                   </div>
                   <button
                     onClick={() => setCallLead({ id: f.lead_id, full_name: f.lead_name, phone: f.lead_phone })}
-                    className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex-shrink-0"
+                    className="text-xs bg-sky-500 text-white px-2 py-1 rounded hover:bg-sky-600 flex-shrink-0"
                   >
                     Call
                   </button>
@@ -103,7 +103,7 @@ export default function Dashboard() {
           </div>
           {followUps.length > 0 && (
             <div className="px-4 py-2 border-t border-gray-100">
-              <Link to="/follow-ups" className="text-xs text-blue-600 hover:underline">View all follow-ups →</Link>
+              <Link to="/follow-ups" className="text-xs text-sky-600 hover:underline">View all follow-ups →</Link>
             </div>
           )}
         </div>
@@ -143,7 +143,7 @@ export default function Dashboard() {
                 <span className="text-base mt-0.5">{activityIcon(a.activity_type)}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-gray-700 truncate">
-                    <Link to={`/leads/${a.lead_id}`} className="font-medium hover:text-blue-600">{a.lead_name}</Link>
+                    <Link to={`/leads/${a.lead_id}`} className="font-medium hover:text-sky-600">{a.lead_name}</Link>
                     {' — '}{a.description}
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">{a.user_name} · {timeAgo(a.created_at)}</div>
