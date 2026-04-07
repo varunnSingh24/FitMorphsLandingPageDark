@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@fitmorphs.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -74,27 +74,6 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-400 text-center">Demo credentials</p>
-            <div className="mt-2 space-y-1.5">
-              {[
-                { role: 'Admin', email: 'admin@fitmorphs.com', pw: 'admin123' },
-                { role: 'Manager', email: 'rahul@fitmorphs.com', pw: 'agent123' },
-                { role: 'Agent', email: 'priya@fitmorphs.com', pw: 'agent123' },
-              ].map(c => (
-                <button
-                  key={c.email}
-                  type="button"
-                  onClick={() => { setEmail(c.email); setPassword(c.pw); }}
-                  className="w-full text-left px-3 py-1.5 rounded bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  <span className="text-xs font-medium text-gray-700">{c.role}</span>
-                  <span className="text-xs text-gray-400 ml-2">{c.email}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
