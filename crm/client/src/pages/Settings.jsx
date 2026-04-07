@@ -24,6 +24,12 @@ export default function Settings() {
     load();
   };
 
+  const handleDelete = async (u) => {
+    if (!window.confirm(`Delete user "${u.name}"? This cannot be undone.`)) return;
+    await api.delete(`/users/${u.id}`);
+    load();
+  };
+
   return (
     <div className="space-y-5 max-w-4xl">
       <div className="flex items-center justify-between">
@@ -92,10 +98,14 @@ export default function Settings() {
                     >Edit</button>
                     <button
                       onClick={() => handleToggleActive(u)}
-                      className={`text-xs ${u.is_active ? 'text-red-600' : 'text-green-600'} hover:underline`}
+                      className={`text-xs ${u.is_active ? 'text-orange-600' : 'text-green-600'} hover:underline`}
                     >
                       {u.is_active ? 'Deactivate' : 'Activate'}
                     </button>
+                    <button
+                      onClick={() => handleDelete(u)}
+                      className="text-xs text-red-600 hover:underline"
+                    >Delete</button>
                   </div>
                 </td>
               </tr>

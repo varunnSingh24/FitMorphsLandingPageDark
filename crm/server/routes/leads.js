@@ -270,4 +270,40 @@ router.post('/bulk-assign', requireRole('admin', 'manager'), (req, res) => {
   res.json({ success: true, count: lead_ids.length });
 });
 
+// DELETE /api/leads/:id (admin/manager only)
+router.delete('/:id', requireRole('admin', 'manager'), (req, res) => {
+  const db = getDb();
+  const lead = db.prepare('SELECT id FROM leads WHERE id = ?').get(req.params.id);
+  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+  db.transaction(() => {
+    db.prepare('DELETE FROM call_logs WHERE lead_id = ?').run(lead.id);
+    db.prepare('DELETE FROM activities WHERE lead_id = ?').run(lead.id);
+    db.prepare('DELETE FROM follow_ups WHERE lead_id = ?').run(lead.id);
+    db.prepare('DELETE FROM medical_histories WHERE lead_id = ?').run(lead.id);
+    db.prepare('DELETE FROM leads WHERE id = ?').run(lead.id);
+  })();
+
+  res.json({ success: true });
+});
+
+// DELETE /api/leads/bulk (admin/manager only)
+router.post('/bulk-delete', requireRole('admin', 'manager'), (req, res) => {
+  const db = getDb();
+  const { lead_ids } = req.body;
+  if (!lead_ids?.length) return res.status(400).json({ error: 'lead_ids required' });
+
+  db.transaction(() => {
+    lead_ids.forEach(id => {
+      db.prepare('DELETE FROM call_logs WHERE lead_id = ?').run(id);
+      db.prepare('DELETE FROM activities WHERE lead_id = ?').run(id);
+      db.prepare('DELETE FROM follow_ups WHERE lead_id = ?').run(id);
+      db.prepare('DELETE FROM medical_histories WHERE lead_id = ?').run(id);
+      db.prepare('DELETE FROM leads WHERE id = ?').run(id);
+    });
+  })();
+
+  res.json({ success: true, count: lead_ids.length });
+});
+
 module.exports = router;
