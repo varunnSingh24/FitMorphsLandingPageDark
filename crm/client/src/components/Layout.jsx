@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
@@ -13,100 +13,133 @@ const navItems = [
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile drawer on route change
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
+  const SidebarContent = ({ mobile = false }) => (
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-700">
+        <img src="/logo.png" alt="FitMorphs Logo" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+        {(mobile || sidebarOpen) && (
+          <div>
+            <div className="text-white font-bold text-base leading-tight">FitMorphs</div>
+            <div className="text-slate-400 text-xs">CRM</div>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 py-4 space-y-0.5 px-2">
+        {navItems.map(item => {
+          if (item.roles && !item.roles.includes(user?.role)) return null;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.exact}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? 'bg-sky-500 text-white font-medium'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                }`
+              }
+            >
+              <item.icon className="w-4 h-4 flex-shrink-0" />
+              {(mobile || sidebarOpen) && <span>{item.label}</span>}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      {/* User */}
+      <div className="border-t border-slate-700 p-3">
+        {(mobile || sidebarOpen) ? (
+          <div className="flex items-center gap-2">
+            <Link to="/profile" className="flex items-center gap-2 flex-1 min-w-0 group">
+              <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:bg-sky-400 transition-colors">
+                {user?.name?.[0]?.toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-xs font-medium truncate group-hover:text-sky-300 transition-colors">{user?.name}</div>
+                <div className="text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</div>
+              </div>
+            </Link>
+            <button onClick={handleLogout} className="text-slate-400 hover:text-white p-1 rounded" title="Logout">
+              <LogoutIcon className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <Link to="/profile" className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold hover:bg-sky-400 transition-colors" title={user?.name}>
+              {user?.name?.[0]?.toUpperCase()}
+            </Link>
+            <button onClick={handleLogout} className="w-full flex justify-center text-slate-400 hover:text-white p-1 rounded" title="Logout">
+              <LogoutIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-56' : 'w-14'} bg-sidebar flex flex-col flex-shrink-0 transition-all duration-200`}>
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-700">
-          <img
-            src="/logo.png"
-            alt="FitMorphs Logo"
-            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-          />
-          {sidebarOpen && (
-            <div>
-              <div className="text-white font-bold text-base leading-tight">FitMorphs</div>
-              <div className="text-slate-400 text-xs">CRM</div>
-            </div>
-          )}
-        </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 space-y-0.5 px-2">
-          {navItems.map(item => {
-            if (item.roles && !item.roles.includes(user?.role)) return null;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.exact}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isActive
-                      ? 'bg-sky-500 text-white font-medium'
-                      : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                  }`
-                }
-              >
-                <item.icon className="w-4 h-4 flex-shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
-              </NavLink>
-            );
-          })}
-        </nav>
+      {/* Mobile overlay backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-        {/* User */}
-        <div className="border-t border-slate-700 p-3">
-          {sidebarOpen ? (
-            <div className="flex items-center gap-2">
-              <Link to="/profile" className="flex items-center gap-2 flex-1 min-w-0 group">
-                <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:bg-sky-400 transition-colors">
-                  {user?.name?.[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-white text-xs font-medium truncate group-hover:text-sky-300 transition-colors">{user?.name}</div>
-                  <div className="text-slate-400 text-xs capitalize">{user?.role?.replace('_', ' ')}</div>
-                </div>
-              </Link>
-              <button onClick={handleLogout} className="text-slate-400 hover:text-white p-1 rounded" title="Logout">
-                <LogoutIcon className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <Link to="/profile" className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold hover:bg-sky-400 transition-colors" title={user?.name}>
-                {user?.name?.[0]?.toUpperCase()}
-              </Link>
-              <button onClick={handleLogout} className="w-full flex justify-center text-slate-400 hover:text-white p-1 rounded" title="Logout">
-                <LogoutIcon className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Mobile drawer */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-40 w-64 bg-sidebar flex flex-col transition-transform duration-200
+        md:hidden
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <SidebarContent mobile={true} />
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className={`hidden md:flex ${sidebarOpen ? 'w-56' : 'w-14'} bg-sidebar flex-col flex-shrink-0 transition-all duration-200`}>
+        <SidebarContent mobile={false} />
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top bar */}
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <button onClick={() => setSidebarOpen(v => !v)} className="text-gray-500 hover:text-gray-700 p-1 rounded">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
+          {/* Menu button - hamburger on mobile, collapse on desktop */}
+          <button
+            onClick={() => { setSidebarOpen(v => !v); setMobileOpen(v => !v); }}
+            className="text-gray-500 hover:text-gray-700 p-1 rounded"
+          >
             <MenuIcon className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-4">
-            <NavLink to="/leads/add" className="btn-primary flex items-center gap-1.5 text-xs py-1.5">
-              <PlusIcon className="w-3.5 h-3.5" /> New Lead
+          <div className="flex items-center gap-2 sm:gap-4">
+            <NavLink to="/leads/add" className="btn-primary flex items-center gap-1.5 text-xs py-1.5 px-3">
+              <PlusIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">New Lead</span>
+              <span className="sm:hidden">Add</span>
             </NavLink>
-            <span className="text-gray-500 text-xs">{new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+            <span className="text-gray-500 text-xs hidden sm:block">
+              {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+            </span>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

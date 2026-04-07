@@ -74,34 +74,37 @@ export default function Profile() {
     <div className="space-y-5 max-w-5xl">
 
       {/* Header Card */}
-      <div className="card p-6">
-        <div className="flex items-start gap-5">
-          {/* Avatar */}
-          <div className={`w-20 h-20 rounded-2xl ${getAvatarColor(user.id)} flex items-center justify-center text-white text-3xl font-bold flex-shrink-0 shadow-lg`}>
-            {user.name?.[0]?.toUpperCase()}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap mb-1">
-              <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
-              <span className={`badge text-xs font-medium ${ROLE_COLORS[user.role]}`}>
-                {ROLE_LABELS[user.role]}
-              </span>
-              <span className={`badge text-xs ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {user.is_active ? '● Active' : '● Inactive'}
-              </span>
+      <div className="card p-4 sm:p-6">
+        {/* Top row: avatar + info + edit btn */}
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            {/* Avatar */}
+            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl ${getAvatarColor(user.id)} flex items-center justify-center text-white text-2xl sm:text-3xl font-bold flex-shrink-0 shadow-lg`}>
+              {user.name?.[0]?.toUpperCase()}
             </div>
-            <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
-              <span className="flex items-center gap-1.5">
-                <EmailIcon className="w-4 h-4" /> {user.email}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <PhoneIcon className="w-4 h-4" /> {user.phone || 'No phone added'}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CalendarIcon className="w-4 h-4" /> Joined {formatDate(user.created_at)}
-              </span>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">{user.name}</h1>
+                <span className={`badge text-xs font-medium ${ROLE_COLORS[user.role]}`}>
+                  {ROLE_LABELS[user.role]}
+                </span>
+                <span className={`badge text-xs ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {user.is_active ? '● Active' : '● Inactive'}
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-1.5 sm:gap-4 mt-1 text-xs sm:text-sm text-gray-500">
+                <span className="flex items-center gap-1.5 truncate">
+                  <EmailIcon className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{user.email}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <PhoneIcon className="w-3.5 h-3.5 flex-shrink-0" /> {user.phone || 'No phone added'}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CalendarIcon className="w-3.5 h-3.5 flex-shrink-0" /> Joined {formatDate(user.created_at)}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -109,7 +112,7 @@ export default function Profile() {
           {(isSelf || authUser?.role === 'admin') && (
             <button
               onClick={() => setShowEdit(true)}
-              className="btn-secondary text-sm flex items-center gap-1.5 flex-shrink-0"
+              className="btn-secondary text-sm flex items-center gap-1.5 self-start sm:flex-shrink-0"
             >
               <EditIcon className="w-4 h-4" /> Edit Profile
             </button>
@@ -117,7 +120,7 @@ export default function Profile() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-gray-100">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-gray-100">
           <StatCard label="Total Leads" value={stats.totalLeads} sub={`${stats.activeLeads} active`} color="blue" icon="👥" />
           <StatCard label="Conversions" value={stats.conversions} sub="all time" color="green" icon="✅" />
           <StatCard label="Calls This Month" value={stats.callsMonth} sub={`${stats.callsTotal} total`} color="purple" icon="📞" />
@@ -151,45 +154,67 @@ export default function Profile() {
             {recentCalls.length === 0 ? (
               <EmptyState icon="📞" message="No calls logged yet" />
             ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="table-th">Lead</th>
-                    <th className="table-th">Type</th>
-                    <th className="table-th">Outcome</th>
-                    <th className="table-th">Duration</th>
-                    <th className="table-th">Summary</th>
-                    <th className="table-th">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
+              <>
+                {/* Mobile call cards */}
+                <div className="sm:hidden divide-y divide-gray-50">
                   {recentCalls.map(call => (
-                    <tr key={call.id} className="hover:bg-gray-50">
-                      <td className="table-td">
-                        <Link to={`/leads/${call.lead_id}`} className="font-medium text-sky-600 hover:underline text-sm">
-                          {call.lead_name}
-                        </Link>
-                        <div className="text-xs text-gray-400 font-mono">{call.lead_phone}</div>
-                      </td>
-                      <td className="table-td">
+                    <div key={call.id} className="px-4 py-3 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <Link to={`/leads/${call.lead_id}`} className="font-medium text-sky-600 text-sm">{call.lead_name}</Link>
+                        <span className="text-xs text-gray-400 whitespace-nowrap">{formatDate(call.created_at)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         <span className={`badge text-xs ${call.call_type === 'inbound' ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'}`}>
                           {call.call_type === 'inbound' ? '↙ Inbound' : '↗ Outbound'}
                         </span>
-                      </td>
-                      <td className="table-td">
                         <span className={`badge text-xs ${OUTCOME_COLORS[call.call_outcome] || 'bg-gray-100 text-gray-600'}`}>
                           {call.call_outcome?.replace(/_/g, ' ')}
                         </span>
-                      </td>
-                      <td className="table-td text-xs text-gray-500">{formatDuration(call.call_duration_seconds)}</td>
-                      <td className="table-td max-w-xs">
-                        <p className="text-xs text-gray-500 truncate">{call.summary || '—'}</p>
-                      </td>
-                      <td className="table-td text-xs text-gray-400 whitespace-nowrap">{formatDateTime(call.created_at)}</td>
-                    </tr>
+                        <span className="text-xs text-gray-400">{formatDuration(call.call_duration_seconds)}</span>
+                      </div>
+                      {call.summary && <p className="text-xs text-gray-500">{call.summary}</p>}
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="table-th">Lead</th>
+                        <th className="table-th">Type</th>
+                        <th className="table-th">Outcome</th>
+                        <th className="table-th">Duration</th>
+                        <th className="table-th">Summary</th>
+                        <th className="table-th">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {recentCalls.map(call => (
+                        <tr key={call.id} className="hover:bg-gray-50">
+                          <td className="table-td">
+                            <Link to={`/leads/${call.lead_id}`} className="font-medium text-sky-600 hover:underline text-sm">{call.lead_name}</Link>
+                            <div className="text-xs text-gray-400 font-mono">{call.lead_phone}</div>
+                          </td>
+                          <td className="table-td">
+                            <span className={`badge text-xs ${call.call_type === 'inbound' ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'}`}>
+                              {call.call_type === 'inbound' ? '↙ Inbound' : '↗ Outbound'}
+                            </span>
+                          </td>
+                          <td className="table-td">
+                            <span className={`badge text-xs ${OUTCOME_COLORS[call.call_outcome] || 'bg-gray-100 text-gray-600'}`}>
+                              {call.call_outcome?.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td className="table-td text-xs text-gray-500">{formatDuration(call.call_duration_seconds)}</td>
+                          <td className="table-td max-w-xs"><p className="text-xs text-gray-500 truncate">{call.summary || '—'}</p></td>
+                          <td className="table-td text-xs text-gray-400 whitespace-nowrap">{formatDateTime(call.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -199,44 +224,57 @@ export default function Profile() {
             {assignedLeads.length === 0 ? (
               <EmptyState icon="👥" message="No leads assigned yet" />
             ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="table-th">Name</th>
-                    <th className="table-th">Phone</th>
-                    <th className="table-th">Status</th>
-                    <th className="table-th">Priority</th>
-                    <th className="table-th">Last Call</th>
-                    <th className="table-th">Added</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
+              <>
+                {/* Mobile lead cards */}
+                <div className="sm:hidden divide-y divide-gray-50">
                   {assignedLeads.map(lead => (
-                    <tr key={lead.id} className="hover:bg-gray-50">
-                      <td className="table-td">
-                        <Link to={`/leads/${lead.id}`} className="font-medium text-sky-600 hover:underline text-sm">
-                          {lead.full_name}
-                        </Link>
-                      </td>
-                      <td className="table-td font-mono text-xs text-gray-500">{lead.phone}</td>
-                      <td className="table-td">
-                        <span className={`badge text-xs ${STATUS_COLORS[lead.status]}`}>
-                          {STATUS_LABELS[lead.status]}
+                    <div key={lead.id} className="px-4 py-3 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <Link to={`/leads/${lead.id}`} className="font-medium text-sky-600 text-sm">{lead.full_name}</Link>
+                        <span className="text-xs text-gray-400 font-mono">{lead.phone}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <span className={`badge text-xs ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
+                        <span className={`badge text-xs ${PRIORITY_COLORS[lead.priority]}`}>{lead.priority}</span>
+                        <span className="text-xs text-gray-400">
+                          {lead.last_call ? formatDate(lead.last_call) : <span className="text-red-400">Never called</span>}
                         </span>
-                      </td>
-                      <td className="table-td">
-                        <span className={`badge text-xs ${PRIORITY_COLORS[lead.priority]}`}>
-                          {lead.priority}
-                        </span>
-                      </td>
-                      <td className="table-td text-xs text-gray-400">
-                        {lead.last_call ? formatDateTime(lead.last_call) : <span className="text-red-400">Never called</span>}
-                      </td>
-                      <td className="table-td text-xs text-gray-400">{formatDate(lead.created_at)}</td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        <th className="table-th">Name</th>
+                        <th className="table-th">Phone</th>
+                        <th className="table-th">Status</th>
+                        <th className="table-th">Priority</th>
+                        <th className="table-th">Last Call</th>
+                        <th className="table-th">Added</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {assignedLeads.map(lead => (
+                        <tr key={lead.id} className="hover:bg-gray-50">
+                          <td className="table-td">
+                            <Link to={`/leads/${lead.id}`} className="font-medium text-sky-600 hover:underline text-sm">{lead.full_name}</Link>
+                          </td>
+                          <td className="table-td font-mono text-xs text-gray-500">{lead.phone}</td>
+                          <td className="table-td"><span className={`badge text-xs ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span></td>
+                          <td className="table-td"><span className={`badge text-xs ${PRIORITY_COLORS[lead.priority]}`}>{lead.priority}</span></td>
+                          <td className="table-td text-xs text-gray-400">
+                            {lead.last_call ? formatDateTime(lead.last_call) : <span className="text-red-400">Never called</span>}
+                          </td>
+                          <td className="table-td text-xs text-gray-400">{formatDate(lead.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
