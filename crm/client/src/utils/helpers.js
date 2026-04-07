@@ -36,7 +36,7 @@ export function timeAgo(dateStr) {
 
 export const STATUS_COLORS = {
   new: 'bg-gray-100 text-gray-700',
-  contacted: 'bg-blue-100 text-blue-700',
+  contacted: 'bg-sky-100 text-sky-700',
   interested: 'bg-purple-100 text-purple-700',
   follow_up: 'bg-yellow-100 text-yellow-700',
   negotiation: 'bg-orange-100 text-orange-700',
@@ -48,7 +48,7 @@ export const STATUS_COLORS = {
 export const PRIORITY_COLORS = {
   hot: 'bg-red-100 text-red-700',
   warm: 'bg-orange-100 text-orange-700',
-  cold: 'bg-blue-100 text-blue-600',
+  cold: 'bg-sky-100 text-sky-600',
 };
 
 export const OUTCOME_COLORS = {
@@ -57,7 +57,7 @@ export const OUTCOME_COLORS = {
   not_interested: 'bg-red-100 text-red-700',
   no_answer: 'bg-gray-100 text-gray-600',
   busy: 'bg-yellow-100 text-yellow-700',
-  callback_requested: 'bg-blue-100 text-blue-700',
+  callback_requested: 'bg-sky-100 text-sky-700',
   wrong_number: 'bg-red-100 text-red-600',
   voicemail: 'bg-gray-100 text-gray-600',
 };

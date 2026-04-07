@@ -83,7 +83,7 @@ export default function LogCallModal({ lead, onClose, onSuccess }) {
                 onClick={() => set('call_outcome', o.value)}
                 className={`text-left px-3 py-2 rounded-lg border text-sm transition-colors ${
                   form.call_outcome === o.value
-                    ? 'bg-blue-600 text-white border-blue-600'
+                    ? 'bg-sky-500 text-white border-sky-600'
                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >

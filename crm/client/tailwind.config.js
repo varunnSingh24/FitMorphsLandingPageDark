@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        sidebar: '#1e293b',
+        sidebar: '#0d1f30',
       },
     },
   },

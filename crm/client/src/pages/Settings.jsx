@@ -58,7 +58,7 @@ export default function Settings() {
               <tr key={u.id} className={`${!u.is_active ? 'opacity-50' : ''} hover:bg-gray-50`}>
                 <td className="table-td">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-7 h-7 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold">
                       {u.name?.[0]?.toUpperCase()}
                     </div>
                     <span className="font-medium text-gray-900">{u.name}</span>
@@ -68,7 +68,7 @@ export default function Settings() {
                 <td className="table-td">
                   <span className={`badge text-xs ${
                     u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                    u.role === 'manager' ? 'bg-blue-100 text-blue-700' :
+                    u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
                     {ROLE_LABELS[u.role]}
@@ -83,12 +83,12 @@ export default function Settings() {
                 <td className="table-td text-xs text-gray-500">{formatDate(u.created_at)}</td>
                 <td className="table-td">
                   <div className="flex items-center gap-3">
-                    <Link to={`/profile/${u.id}`} className="text-xs text-gray-500 hover:text-blue-600 hover:underline">
+                    <Link to={`/profile/${u.id}`} className="text-xs text-gray-500 hover:text-sky-600 hover:underline">
                       Profile
                     </Link>
                     <button
                       onClick={() => { setEditUser(u); setShowModal(true); }}
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-sky-600 hover:underline"
                     >Edit</button>
                     <button
                       onClick={() => handleToggleActive(u)}

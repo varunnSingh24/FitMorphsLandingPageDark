@@ -21,7 +21,7 @@ const HEALTH_CONDITIONS = [
   { key: 'thyroid',           label: 'Thyroid Issues',         color: 'bg-purple-100 text-purple-700' },
   { key: 'pcod_pcos',         label: 'PCOD / PCOS',            color: 'bg-pink-100 text-pink-700' },
   { key: 'arthritis',         label: 'Arthritis / Joint Pain', color: 'bg-yellow-100 text-yellow-700' },
-  { key: 'asthma',            label: 'Asthma',                 color: 'bg-blue-100 text-blue-700' },
+  { key: 'asthma',            label: 'Asthma',                 color: 'bg-sky-100 text-sky-700' },
   { key: 'obesity',           label: 'Obesity',                color: 'bg-orange-100 text-orange-800' },
   { key: 'high_cholesterol',  label: 'High Cholesterol',       color: 'bg-amber-100 text-amber-700' },
   { key: 'kidney_issues',     label: 'Kidney Issues',          color: 'bg-indigo-100 text-indigo-700' },
@@ -31,12 +31,12 @@ const HEALTH_CONDITIONS = [
   { key: 'other',             label: 'Other',                  color: 'bg-gray-100 text-gray-600' },
 ];
 
-const AVATAR_COLORS = ['bg-blue-500','bg-violet-500','bg-pink-500','bg-teal-500','bg-orange-500','bg-indigo-500'];
+const AVATAR_COLORS = ['bg-sky-500','bg-violet-500','bg-pink-500','bg-teal-500','bg-orange-500','bg-indigo-500'];
 const avatarColor = (id) => AVATAR_COLORS[(id || 0) % AVATAR_COLORS.length];
 const calcBMI = (w, h) => h && w ? (w / ((h / 100) ** 2)).toFixed(1) : null;
 const bmiLabel = (bmi) => {
   if (!bmi) return null;
-  if (bmi < 18.5) return { label: 'Underweight', color: 'text-blue-600' };
+  if (bmi < 18.5) return { label: 'Underweight', color: 'text-sky-600' };
   if (bmi < 25) return  { label: 'Normal',       color: 'text-green-600' };
   if (bmi < 30) return  { label: 'Overweight',   color: 'text-orange-500' };
   return                { label: 'Obese',         color: 'text-red-600' };
@@ -105,7 +105,7 @@ export default function LeadDetail() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center text-gray-400">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"/>
+        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"/>
         Loading lead...
       </div>
     </div>
@@ -120,7 +120,7 @@ export default function LeadDetail() {
       {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         {/* gradient bar */}
-        <div className="h-2 bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500" />
+        <div className="h-2 bg-gradient-to-r from-sky-400 via-violet-500 to-pink-500" />
 
         <div className="p-5">
           <div className="flex items-start gap-4">
@@ -141,7 +141,7 @@ export default function LeadDetail() {
                 <span className={`badge ${PRIORITY_COLORS[lead.priority]}`}>{lead.priority === 'hot' ? '🔥' : lead.priority === 'warm' ? '🌤' : '❄️'} {lead.priority}</span>
                 {lead.interested_in && <span className="badge bg-indigo-50 text-indigo-700">{INTEREST_LABELS[lead.interested_in]}</span>}
                 <span className="text-gray-300">|</span>
-                <a href={`tel:${lead.phone}`} className="text-sm font-mono text-blue-600 hover:underline">{lead.phone}</a>
+                <a href={`tel:${lead.phone}`} className="text-sm font-mono text-sky-600 hover:underline">{lead.phone}</a>
                 {lead.city && <span className="text-xs text-gray-400">📍 {lead.city}</span>}
               </div>
             </div>
@@ -170,14 +170,14 @@ export default function LeadDetail() {
                     disabled={savingStatus}
                     className={`flex-1 text-center text-xs py-1.5 rounded-lg font-medium transition-all ${
                       i <= pipelineIdx
-                        ? 'bg-blue-600 text-white shadow-sm'
+                        ? 'bg-sky-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                     }`}
                   >
                     {STATUS_LABELS[s]}
                   </button>
                   {i < PIPELINE.length - 1 && (
-                    <svg className={`w-3 h-3 flex-shrink-0 ${i < pipelineIdx ? 'text-blue-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
+                    <svg className={`w-3 h-3 flex-shrink-0 ${i < pipelineIdx ? 'text-sky-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/>
                     </svg>
                   )}
@@ -196,7 +196,7 @@ export default function LeadDetail() {
               <span className={`badge text-sm px-3 py-1.5 ${lead.status === 'lost' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
                 {lead.status === 'lost' ? '❌ Lost' : '🗑 Junk'}
               </span>
-              <button onClick={() => handleStatusChange('new')} className="text-xs text-blue-600 hover:underline">Reopen as New</button>
+              <button onClick={() => handleStatusChange('new')} className="text-xs text-sky-600 hover:underline">Reopen as New</button>
             </div>
           )}
         </div>
@@ -212,9 +212,9 @@ export default function LeadDetail() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-1.5">
-                <ContactIcon className="w-4 h-4 text-blue-500"/> Contact Info
+                <ContactIcon className="w-4 h-4 text-sky-500"/> Contact Info
               </h2>
-              <button onClick={() => setEditing(!editing)} className="text-xs text-blue-600 hover:underline">
+              <button onClick={() => setEditing(!editing)} className="text-xs text-sky-600 hover:underline">
                 {editing ? 'Cancel' : 'Edit'}
               </button>
             </div>
@@ -223,9 +223,9 @@ export default function LeadDetail() {
               <EditForm form={editForm} setForm={setEditForm} onSave={handleSaveEdit} onCancel={() => setEditing(false)}/>
             ) : (
               <dl className="space-y-2.5">
-                <InfoRow icon="📞" label="Phone" value={<a href={`tel:${lead.phone}`} className="text-blue-600 font-mono hover:underline">{lead.phone}</a>}/>
+                <InfoRow icon="📞" label="Phone" value={<a href={`tel:${lead.phone}`} className="text-sky-600 font-mono hover:underline">{lead.phone}</a>}/>
                 {lead.secondary_phone && <InfoRow icon="📱" label="Alt Phone" value={<span className="font-mono">{lead.secondary_phone}</span>}/>}
-                {lead.email && <InfoRow icon="📧" label="Email" value={<a href={`mailto:${lead.email}`} className="text-blue-600 truncate hover:underline">{lead.email}</a>}/>}
+                {lead.email && <InfoRow icon="📧" label="Email" value={<a href={`mailto:${lead.email}`} className="text-sky-600 truncate hover:underline">{lead.email}</a>}/>}
                 <div className="border-t border-gray-100 pt-2.5 space-y-2.5">
                   {lead.gender && <InfoRow icon="👤" label="Gender" value={<span className="capitalize">{lead.gender}</span>}/>}
                   {lead.age && <InfoRow icon="🎂" label="Age" value={`${lead.age} years`}/>}
@@ -259,7 +259,7 @@ export default function LeadDetail() {
               </select>
               {lead.assigned_name && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Assigned to <Link to={`/profile/${lead.assigned_to}`} className="font-medium text-blue-600 hover:underline">{lead.assigned_name}</Link>
+                  Assigned to <Link to={`/profile/${lead.assigned_to}`} className="font-medium text-sky-600 hover:underline">{lead.assigned_name}</Link>
                 </p>
               )}
             </div>
@@ -273,7 +273,7 @@ export default function LeadDetail() {
               </h2>
               <button
                 onClick={() => { setTab('medical'); setEditMedical(!medical); }}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-sky-600 hover:underline"
               >
                 {medical ? 'Edit' : '+ Add'}
               </button>
@@ -289,21 +289,21 @@ export default function LeadDetail() {
                   {/* Quick stats */}
                   <div className="grid grid-cols-3 gap-2 text-center">
                     {medical.height_cm && (
-                      <div className="bg-blue-50 rounded-lg py-2">
-                        <div className="text-sm font-bold text-blue-700">{medical.height_cm}</div>
-                        <div className="text-xs text-blue-500">cm</div>
+                      <div className="bg-sky-50 rounded-lg py-2">
+                        <div className="text-sm font-bold text-sky-700">{medical.height_cm}</div>
+                        <div className="text-xs text-sky-500">cm</div>
                       </div>
                     )}
                     {medical.weight_kg && (
-                      <div className="bg-blue-50 rounded-lg py-2">
-                        <div className="text-sm font-bold text-blue-700">{medical.weight_kg}</div>
-                        <div className="text-xs text-blue-500">kg</div>
+                      <div className="bg-sky-50 rounded-lg py-2">
+                        <div className="text-sm font-bold text-sky-700">{medical.weight_kg}</div>
+                        <div className="text-xs text-sky-500">kg</div>
                       </div>
                     )}
                     {mBMI && (
-                      <div className="bg-blue-50 rounded-lg py-2">
+                      <div className="bg-sky-50 rounded-lg py-2">
                         <div className={`text-sm font-bold ${mBMIInfo?.color}`}>{mBMI}</div>
-                        <div className="text-xs text-blue-500">BMI</div>
+                        <div className="text-xs text-sky-500">BMI</div>
                       </div>
                     )}
                   </div>
@@ -343,7 +343,7 @@ export default function LeadDetail() {
                       </span>
                     </div>
                   )}
-                  <button onClick={() => setTab('medical')} className="text-xs text-blue-600 hover:underline w-full text-center pt-1">
+                  <button onClick={() => setTab('medical')} className="text-xs text-sky-600 hover:underline w-full text-center pt-1">
                     View full medical history →
                   </button>
                 </div>
@@ -353,7 +353,7 @@ export default function LeadDetail() {
                 <p className="text-xs text-gray-400 mb-2">No medical history recorded</p>
                 <button
                   onClick={() => { setTab('medical'); setEditMedical(true); }}
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-sky-600 hover:underline"
                 >
                   + Add medical history
                 </button>
@@ -385,12 +385,12 @@ export default function LeadDetail() {
             ].map(([key, label, count]) => (
               <button key={key} onClick={() => setTab(key)}
                 className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  tab === key ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  tab === key ? 'border-sky-600 text-sky-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
                 {label}
                 {count != null && count > 0 && (
-                  <span className="ml-1.5 text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">{count}</span>
+                  <span className="ml-1.5 text-xs bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded-full">{count}</span>
                 )}
               </button>
             ))}
@@ -517,9 +517,9 @@ function MedicalHistory({ medical, leadId, editMode, setEditMode, onSave }) {
             { label: 'BMI', value: mBMI ? <span className={mBMIInfo?.color}>{mBMI} <span className="text-xs">({mBMIInfo?.label})</span></span> : '—' },
             { label: 'Blood Group', value: m.blood_group || '—' },
           ].map(({ label, value }) => (
-            <div key={label} className="bg-blue-50 rounded-xl p-3 text-center">
-              <div className="text-lg font-bold text-blue-700">{value}</div>
-              <div className="text-xs text-blue-500 mt-0.5">{label}</div>
+            <div key={label} className="bg-sky-50 rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-sky-700">{value}</div>
+              <div className="text-xs text-sky-500 mt-0.5">{label}</div>
             </div>
           ))}
         </div>
@@ -786,7 +786,7 @@ function InfoRow({ icon, label, value }) {
 
 function TimelineItem({ activity }) {
   const meta = {
-    call:             { icon: '📞', bg: 'bg-blue-100',   dot: 'bg-blue-500' },
+    call:             { icon: '📞', bg: 'bg-sky-100',   dot: 'bg-sky-500' },
     email:            { icon: '📧', bg: 'bg-gray-100',   dot: 'bg-gray-400' },
     whatsapp:         { icon: '💬', bg: 'bg-green-100',  dot: 'bg-green-500' },
     meeting:          { icon: '🤝', bg: 'bg-purple-100', dot: 'bg-purple-500' },
@@ -819,7 +819,7 @@ function CallLogItem({ log }) {
     <div className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-sm font-semibold ${log.call_type === 'inbound' ? 'text-green-700' : 'text-blue-700'}`}>
+          <span className={`text-sm font-semibold ${log.call_type === 'inbound' ? 'text-green-700' : 'text-sky-700'}`}>
             {log.call_type === 'inbound' ? '↙ Inbound' : '↗ Outbound'} Call
           </span>
           <span className={`badge text-xs ${OUTCOME_COLORS[log.call_outcome] || 'bg-gray-100 text-gray-600'}`}>
@@ -836,7 +836,7 @@ function CallLogItem({ log }) {
       )}
 
       {log.follow_up_date && (
-        <div className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+        <div className="text-xs text-sky-600 mt-2 flex items-center gap-1">
           📅 Follow-up scheduled: <span className="font-medium">{formatDate(log.follow_up_date)}</span>
         </div>
       )}

@@ -8,12 +8,12 @@ import { ModalWrapper } from '../components/LogCallModal';
 const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', sales_agent: 'Sales Agent' };
 const ROLE_COLORS = {
   admin: 'bg-purple-100 text-purple-700',
-  manager: 'bg-blue-100 text-blue-700',
+  manager: 'bg-sky-100 text-sky-700',
   sales_agent: 'bg-gray-100 text-gray-700',
 };
 
 const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-pink-500',
+  'bg-sky-500', 'bg-indigo-500', 'bg-violet-500', 'bg-pink-500',
   'bg-rose-500', 'bg-orange-500', 'bg-teal-500', 'bg-cyan-500',
 ];
 
@@ -52,7 +52,7 @@ export default function Profile() {
   if (loading) return (
     <div className="flex items-center justify-center h-64 text-gray-400">
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
         Loading profile...
       </div>
     </div>
@@ -137,7 +137,7 @@ export default function Profile() {
               onClick={() => setActiveTab(tab.key)}
               className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-sky-600 text-sky-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -166,13 +166,13 @@ export default function Profile() {
                   {recentCalls.map(call => (
                     <tr key={call.id} className="hover:bg-gray-50">
                       <td className="table-td">
-                        <Link to={`/leads/${call.lead_id}`} className="font-medium text-blue-600 hover:underline text-sm">
+                        <Link to={`/leads/${call.lead_id}`} className="font-medium text-sky-600 hover:underline text-sm">
                           {call.lead_name}
                         </Link>
                         <div className="text-xs text-gray-400 font-mono">{call.lead_phone}</div>
                       </td>
                       <td className="table-td">
-                        <span className={`badge text-xs ${call.call_type === 'inbound' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                        <span className={`badge text-xs ${call.call_type === 'inbound' ? 'bg-green-100 text-green-700' : 'bg-sky-100 text-sky-700'}`}>
                           {call.call_type === 'inbound' ? '↙ Inbound' : '↗ Outbound'}
                         </span>
                       </td>
@@ -214,7 +214,7 @@ export default function Profile() {
                   {assignedLeads.map(lead => (
                     <tr key={lead.id} className="hover:bg-gray-50">
                       <td className="table-td">
-                        <Link to={`/leads/${lead.id}`} className="font-medium text-blue-600 hover:underline text-sm">
+                        <Link to={`/leads/${lead.id}`} className="font-medium text-sky-600 hover:underline text-sm">
                           {lead.full_name}
                         </Link>
                       </td>
@@ -263,7 +263,7 @@ export default function Profile() {
 
 function StatCard({ label, value, sub, color, icon }) {
   const colors = {
-    blue: 'bg-blue-50 text-blue-700',
+    blue: 'bg-sky-50 text-sky-700',
     green: 'bg-green-50 text-green-700',
     purple: 'bg-purple-50 text-purple-700',
     red: 'bg-red-50 text-red-600',
