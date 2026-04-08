@@ -104,6 +104,27 @@ function initializeDatabase() {
     );
   `);
 
+  // Migration: update CHECK constraint to include dietician role
+  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+  if (schema && !schema.sql.includes('dietician')) {
+    db.exec(`
+      CREATE TABLE users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('admin','manager','sales_agent','dietician')),
+        phone TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      INSERT INTO users_new SELECT * FROM users;
+      DROP TABLE users;
+      ALTER TABLE users_new RENAME TO users;
+    `);
+    console.log('Migrated users table: added dietician role');
+  }
+
   seedIfEmpty(db);
 }
 
