@@ -4,8 +4,8 @@ import api from '../utils/api';
 import { formatDate } from '../utils/helpers';
 import { ModalWrapper } from '../components/LogCallModal';
 
-const ROLES = ['admin', 'manager', 'sales_agent'];
-const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', sales_agent: 'Sales Agent' };
+const ROLES = ['admin', 'manager', 'sales_agent', 'dietician'];
+const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', sales_agent: 'Sales Agent', dietician: 'Dietician' };
 
 export default function Settings() {
   const [users, setUsers] = useState([]);
@@ -70,6 +70,7 @@ export default function Settings() {
                 <span className={`badge text-xs ${
                   u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                   u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
+                  u.role === 'dietician' ? 'bg-emerald-100 text-emerald-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>{ROLE_LABELS[u.role]}</span>
                 {u.phone && <span className="text-xs text-gray-400 font-mono">{u.phone}</span>}
@@ -118,6 +119,7 @@ export default function Settings() {
                     <span className={`badge text-xs ${
                       u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                       u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
+                    u.role === 'dietician' ? 'bg-emerald-100 text-emerald-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>{ROLE_LABELS[u.role]}</span>
                   </td>

@@ -253,7 +253,7 @@ export default function LeadDetail() {
               </h2>
               <select className="select text-sm" value={lead.assigned_to || ''} onChange={e => handleAssign(e.target.value)}>
                 <option value="">Unassigned</option>
-                {users.filter(u => ['sales_agent','manager'].includes(u.role)).map(u => (
+                {users.filter(u => ['sales_agent','manager','dietician'].includes(u.role)).map(u => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>

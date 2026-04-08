@@ -5,11 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { formatDate, formatDateTime, formatDuration, STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, OUTCOME_COLORS } from '../utils/helpers';
 import { ModalWrapper } from '../components/LogCallModal';
 
-const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', sales_agent: 'Sales Agent' };
+const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', sales_agent: 'Sales Agent', dietician: 'Dietician' };
 const ROLE_COLORS = {
   admin: 'bg-purple-100 text-purple-700',
   manager: 'bg-sky-100 text-sky-700',
   sales_agent: 'bg-gray-100 text-gray-700',
+  dietician: 'bg-emerald-100 text-emerald-700',
 };
 
 const AVATAR_COLORS = [
@@ -413,6 +414,7 @@ function EditProfileModal({ user, isSelf, isAdmin, onClose, onSuccess }) {
               <label className="label">Role</label>
               <select className="select" value={form.role} onChange={e => set('role', e.target.value)}>
                 <option value="sales_agent">Sales Agent</option>
+                <option value="dietician">Dietician</option>
                 <option value="manager">Manager</option>
                 <option value="admin">Admin</option>
               </select>
