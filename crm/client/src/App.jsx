@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import LeadList from './pages/Leads/LeadList';
 import LeadDetail from './pages/Leads/LeadDetail';
 import AddLead from './pages/Leads/AddLead';
+import ClientList from './pages/Clients/ClientList';
+import ClientDetail from './pages/Clients/ClientDetail';
 import FollowUps from './pages/FollowUps';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -35,6 +37,8 @@ export default function App() {
             <Route path="leads" element={<LeadList />} />
             <Route path="leads/add" element={<AddLead />} />
             <Route path="leads/:id" element={<LeadDetail />} />
+            <Route path="clients" element={<ClientList />} />
+            <Route path="clients/:id" element={<ClientDetail />} />
             <Route path="follow-ups" element={<FollowUps />} />
             <Route path="profile" element={<Profile />} />
             <Route path="profile/:id" element={<Profile />} />

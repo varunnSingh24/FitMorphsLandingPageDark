@@ -132,8 +132,8 @@ export default function AddLead() {
         {/* ── Section 1: Personal Info ── */}
         <div className="card p-5">
           <SectionHeader number="1" title="Personal Information" icon="👤"/>
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="sm:col-span-2">
               <label className="label">Full Name *</label>
               <input className="input" placeholder="e.g. Rajesh Kumar" value={form.full_name} onChange={e => set('full_name', e.target.value)} required/>
             </div>
@@ -176,7 +176,7 @@ export default function AddLead() {
         {/* ── Section 2: Lead Info ── */}
         <div className="card p-5">
           <SectionHeader number="2" title="Lead Details" icon="📋"/>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="label">Lead Source</label>
               <select className="select" value={form.source} onChange={e => set('source', e.target.value)}>
@@ -218,7 +218,7 @@ export default function AddLead() {
                 </select>
               </div>
             )}
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <label className="label">Notes</label>
               <textarea className="input resize-none" rows={3} placeholder="Any details about this lead — health goals, budget, timing, special requirements..." value={form.notes} onChange={e => set('notes', e.target.value)}/>
             </div>
@@ -252,7 +252,7 @@ export default function AddLead() {
               {/* Physical stats */}
               <div className="pt-5">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">📊 Physical Stats</h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="label">Height (cm)</label>
                     <input className="input" type="number" placeholder="165" value={medical.height_cm} onChange={e => setMed('height_cm', e.target.value)}/>
@@ -269,7 +269,7 @@ export default function AddLead() {
                     </select>
                   </div>
                   {bmi && (
-                    <div className="col-span-3">
+                    <div className="col-span-2 sm:col-span-3">
                       <div className={`text-sm font-medium ${bmiInfo?.color} bg-gray-50 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg`}>
                         <span>BMI: {bmi}</span>
                         <span className="font-normal text-xs">({bmiInfo?.label})</span>
@@ -382,7 +382,7 @@ export default function AddLead() {
               {/* Emergency Contact */}
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">🚨 Emergency Contact</h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="label">Full Name</label>
                     <input className="input" placeholder="Contact name" value={medical.emergency_contact_name} onChange={e => setMed('emergency_contact_name', e.target.value)}/>
