@@ -180,6 +180,7 @@ function initializeDatabase() {
   const leadsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='leads'").get();
   if (leadsSchema && leadsSchema.sql.includes("source TEXT CHECK")) {
     db.exec(`
+      DROP TABLE IF EXISTS leads_new;
       CREATE TABLE leads_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT NOT NULL,
@@ -211,6 +212,7 @@ function initializeDatabase() {
   const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
   if (schema && !schema.sql.includes('dietician')) {
     db.exec(`
+      DROP TABLE IF EXISTS users_new;
       CREATE TABLE users_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -233,6 +235,7 @@ function initializeDatabase() {
   if (clientsSchema && clientsSchema.sql.includes('on_hold')) {
     db.exec(`
       UPDATE clients SET status = 'paused' WHERE status = 'on_hold';
+      DROP TABLE IF EXISTS clients_new;
       CREATE TABLE clients_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         lead_id INTEGER NOT NULL REFERENCES leads(id),
@@ -258,6 +261,7 @@ function initializeDatabase() {
   const checkinsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='checkins'").get();
   if (checkinsSchema && !checkinsSchema.sql.includes('excellent')) {
     db.exec(`
+      DROP TABLE IF EXISTS checkins_new;
       CREATE TABLE checkins_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         client_id INTEGER NOT NULL REFERENCES clients(id),
