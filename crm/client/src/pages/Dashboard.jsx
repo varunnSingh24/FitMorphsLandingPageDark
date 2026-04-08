@@ -61,7 +61,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {statCards.map(c => (
           <div key={c.label} className={`card p-4 ${c.bg}`}>
             <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
@@ -70,9 +70,9 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Follow-ups today */}
-        <div className="col-span-1 card">
+        <div className="lg:col-span-1 card">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900 text-sm">Today's Follow-Ups</h2>
             <span className="badge bg-orange-100 text-orange-700">{followUps.length}</span>
@@ -109,7 +109,7 @@ export default function Dashboard() {
         </div>
 
         {/* Pipeline Funnel */}
-        <div className="col-span-2 card">
+        <div className="lg:col-span-2 card">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="font-semibold text-gray-900 text-sm">Pipeline Funnel</h2>
           </div>
@@ -131,7 +131,7 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Activity */}
         <div className="card">
           <div className="px-4 py-3 border-b border-gray-100">
