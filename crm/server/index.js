@@ -30,6 +30,9 @@ app.use('/api/follow-ups', require('./routes/followUps'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/clients', require('./routes/clients'));
+app.use('/api/reminders', require('./routes/reminders'));
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

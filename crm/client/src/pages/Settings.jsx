@@ -7,7 +7,48 @@ import { ModalWrapper } from '../components/LogCallModal';
 const ROLES = ['admin', 'manager', 'sales_agent', 'dietician'];
 const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', sales_agent: 'Sales Agent', dietician: 'Dietician' };
 
+const TABS = [
+  { key: 'team', label: 'Team Members', icon: '👥' },
+  { key: 'sources', label: 'Lead Sources', icon: '📡' },
+  { key: 'programs', label: 'Program Types', icon: '📋' },
+];
+
 export default function Settings() {
+  const [tab, setTab] = useState('team');
+
+  return (
+    <div className="space-y-5 max-w-4xl">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-500 text-sm">Manage team, sources, and programs</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="text-base">{t.icon}</span>
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {tab === 'team' && <TeamSection />}
+      {tab === 'sources' && <ConfigListSection settingKey="lead_sources" title="Lead Sources" description="Add or remove sources where leads come from. These appear in the Add Lead and Lead List filters." placeholder="e.g. YouTube Ads" />}
+      {tab === 'programs' && <ConfigListSection settingKey="program_types" title="Program Types" description="Define program types for clients. These appear when converting a lead to an active client." placeholder="e.g. 1 Month Trial" />}
+    </div>
+  );
+}
+
+// ── Team Members Section ────────────────────────────────────────────────
+
+function TeamSection() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -31,22 +72,15 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <>
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-500 text-sm">Manage team members and permissions</p>
-        </div>
+        <div />
         <button className="btn-primary" onClick={() => { setEditUser(null); setShowModal(true); }}>
           + Add User
         </button>
       </div>
 
       <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-          <h2 className="font-semibold text-gray-900 text-sm">Team Members</h2>
-        </div>
-
         {/* Mobile card list */}
         <div className="sm:hidden divide-y divide-gray-100">
           {loading && <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading...</div>}
@@ -62,19 +96,7 @@ export default function Settings() {
                     <div className="text-xs text-gray-400 truncate">{u.email}</div>
                   </div>
                 </div>
-                <span className={`badge text-xs flex-shrink-0 ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {u.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`badge text-xs ${
-                  u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                  u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
-                  u.role === 'dietician' ? 'bg-emerald-100 text-emerald-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>{ROLE_LABELS[u.role]}</span>
-                {u.phone && <span className="text-xs text-gray-400 font-mono">{u.phone}</span>}
-                <span className="text-xs text-gray-400">Joined {formatDate(u.created_at)}</span>
+                <RoleBadge role={u.role} />
               </div>
               <div className="flex items-center gap-3 pt-1">
                 <Link to={`/profile/${u.id}`} className="text-xs text-gray-500 hover:text-sky-600 hover:underline">Profile</Link>
@@ -115,14 +137,7 @@ export default function Settings() {
                     </div>
                   </td>
                   <td className="table-td text-gray-600">{u.email}</td>
-                  <td className="table-td">
-                    <span className={`badge text-xs ${
-                      u.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                      u.role === 'manager' ? 'bg-sky-100 text-sky-700' :
-                    u.role === 'dietician' ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>{ROLE_LABELS[u.role]}</span>
-                  </td>
+                  <td className="table-td"><RoleBadge role={u.role} /></td>
                   <td className="table-td font-mono text-xs">{u.phone || '—'}</td>
                   <td className="table-td">
                     <span className={`badge text-xs ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -154,50 +169,185 @@ export default function Settings() {
           onSuccess={() => { setShowModal(false); load(); }}
         />
       )}
+    </>
+  );
+}
+
+// ── Configurable List Section (Sources / Programs) ──────────────────────
+
+function ConfigListSection({ settingKey, title, description, placeholder }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [editIdx, setEditIdx] = useState(-1);
+  const [editLabel, setEditLabel] = useState('');
+
+  const load = () => {
+    api.get(`/settings/${settingKey}`)
+      .then(r => { setItems(r.data.value || []); setLoading(false); })
+      .catch(() => { setItems([]); setLoading(false); });
+  };
+
+  useEffect(() => { load(); }, [settingKey]);
+
+  const save = async (newItems) => {
+    setSaving(true);
+    try {
+      await api.put(`/settings/${settingKey}`, { value: newItems });
+      setItems(newItems);
+    } catch (e) { alert('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const handleAdd = () => {
+    if (!newLabel.trim()) return;
+    const key = newKey.trim() || newLabel.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    if (items.some(i => i.key === key)) { alert('Key already exists'); return; }
+    save([...items, { key, label: newLabel.trim() }]);
+    setNewKey('');
+    setNewLabel('');
+  };
+
+  const handleRemove = (idx) => {
+    if (!window.confirm(`Remove "${items[idx].label}"?`)) return;
+    save(items.filter((_, i) => i !== idx));
+  };
+
+  const handleEditSave = (idx) => {
+    if (!editLabel.trim()) return;
+    const updated = items.map((item, i) => i === idx ? { ...item, label: editLabel.trim() } : item);
+    save(updated);
+    setEditIdx(-1);
+  };
+
+  const handleMoveUp = (idx) => {
+    if (idx === 0) return;
+    const arr = [...items];
+    [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+    save(arr);
+  };
+
+  const handleMoveDown = (idx) => {
+    if (idx === items.length - 1) return;
+    const arr = [...items];
+    [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+    save(arr);
+  };
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <h2 className="font-semibold text-gray-900 text-sm">{title}</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+      </div>
+
+      {loading ? (
+        <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading...</div>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {items.map((item, idx) => (
+            <div key={item.key} className="px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50">
+              {/* Reorder buttons */}
+              <div className="flex flex-col gap-0.5">
+                <button onClick={() => handleMoveUp(idx)} className="text-gray-300 hover:text-gray-600 text-xs leading-none" disabled={idx === 0}>▲</button>
+                <button onClick={() => handleMoveDown(idx)} className="text-gray-300 hover:text-gray-600 text-xs leading-none" disabled={idx === items.length - 1}>▼</button>
+              </div>
+
+              {/* Label */}
+              <div className="flex-1 min-w-0">
+                {editIdx === idx ? (
+                  <div className="flex items-center gap-2">
+                    <input className="input py-1 text-sm" value={editLabel} onChange={e => setEditLabel(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleEditSave(idx)} autoFocus />
+                    <button onClick={() => handleEditSave(idx)} className="text-xs text-green-600 hover:underline">Save</button>
+                    <button onClick={() => setEditIdx(-1)} className="text-xs text-gray-400 hover:underline">Cancel</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                    <span className="text-xs text-gray-400 font-mono">({item.key})</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              {editIdx !== idx && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => { setEditIdx(idx); setEditLabel(item.label); }} className="text-xs text-sky-600 hover:underline">Edit</button>
+                  <button onClick={() => handleRemove(idx)} className="text-xs text-red-500 hover:underline">Remove</button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add new */}
+          <div className="px-4 py-3 bg-gray-50">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="label">Label</label>
+                <input className="input py-1.5 text-sm" value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                  placeholder={placeholder} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+              </div>
+              <div className="w-36">
+                <label className="label">Key (auto)</label>
+                <input className="input py-1.5 text-sm font-mono" value={newKey} onChange={e => setNewKey(e.target.value)}
+                  placeholder="auto_generated" />
+              </div>
+              <button onClick={handleAdd} className="btn-primary py-1.5 text-sm" disabled={!newLabel.trim() || saving}>
+                + Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {saving && <div className="px-4 py-1.5 bg-sky-50 text-sky-600 text-xs text-center">Saving...</div>}
     </div>
   );
 }
 
+// ── Shared Components ───────────────────────────────────────────────────
+
+function RoleBadge({ role }) {
+  const colors = {
+    admin: 'bg-purple-100 text-purple-700',
+    manager: 'bg-sky-100 text-sky-700',
+    dietician: 'bg-emerald-100 text-emerald-700',
+    sales_agent: 'bg-gray-100 text-gray-700',
+  };
+  return <span className={`badge text-xs ${colors[role] || 'bg-gray-100 text-gray-700'}`}>{ROLE_LABELS[role] || role}</span>;
+}
+
 function UserModal({ user, onClose, onSuccess }) {
   const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    password: '',
-    role: user?.role || 'sales_agent',
-    phone: user?.phone || '',
+    name: user?.name || '', email: user?.email || '', password: '',
+    role: user?.role || 'sales_agent', phone: user?.phone || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || (!user && !form.password)) {
-      setError('Name, email and password are required');
-      return;
+      setError('Name, email and password are required'); return;
     }
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
-      if (user) {
-        await api.put(`/users/${user.id}`, form);
-      } else {
-        await api.post('/users', form);
-      }
+      if (user) await api.put(`/users/${user.id}`, form);
+      else await api.post('/users', form);
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save user');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
     <ModalWrapper onClose={onClose} title={user ? `Edit ${user.name}` : 'Add New User'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="bg-red-50 text-red-600 text-sm px-3 py-2 rounded-lg">{error}</div>}
-
         <div>
           <label className="label">Full Name *</label>
           <input className="input" value={form.name} onChange={e => set('name', e.target.value)} placeholder="Rahul Sharma" required />
@@ -222,7 +372,6 @@ function UserModal({ user, onClose, onSuccess }) {
             <input className="input" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="9876543210" />
           </div>
         </div>
-
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn-primary" disabled={loading}>

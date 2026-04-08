@@ -59,6 +59,12 @@ export default function LeadDetail() {
   const [editForm, setEditForm]   = useState({});
   const [savingStatus, setSavingStatus] = useState(false);
   const [editMedical, setEditMedical] = useState(false);
+  const [showConvert, setShowConvert] = useState(false);
+  const [convertForm, setConvertForm] = useState({
+    dietitian_id: '', program_type: 'custom', start_date: new Date().toISOString().split('T')[0],
+    end_date: '', target_weight_kg: '', notes: '',
+  });
+  const [converting, setConverting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -102,6 +108,28 @@ export default function LeadDetail() {
     load();
   };
 
+  const handleConvertToClient = async (e) => {
+    e.preventDefault();
+    setConverting(true);
+    try {
+      const payload = {
+        lead_id: parseInt(id),
+        dietitian_id: convertForm.dietitian_id ? parseInt(convertForm.dietitian_id) : undefined,
+        program_type: convertForm.program_type,
+        start_date: convertForm.start_date,
+        end_date: convertForm.end_date || undefined,
+        target_weight_kg: convertForm.target_weight_kg ? parseFloat(convertForm.target_weight_kg) : undefined,
+        notes: convertForm.notes || undefined,
+      };
+      const res = await api.post('/clients', payload);
+      navigate(`/clients/${res.data.client.id}`);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to convert lead to client');
+    } finally {
+      setConverting(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center text-gray-400">
@@ -122,8 +150,8 @@ export default function LeadDetail() {
         {/* gradient bar */}
         <div className="h-2 bg-gradient-to-r from-sky-400 via-violet-500 to-pink-500" />
 
-        <div className="p-5">
-          <div className="flex items-start gap-4">
+        <div className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
             <button onClick={() => navigate(-1)} className="mt-1 text-gray-400 hover:text-gray-600 p-1 rounded flex-shrink-0">
               <BackIcon className="w-5 h-5"/>
             </button>
@@ -140,14 +168,14 @@ export default function LeadDetail() {
                 <span className={`badge ${STATUS_COLORS[lead.status]} font-medium`}>{STATUS_LABELS[lead.status]}</span>
                 <span className={`badge ${PRIORITY_COLORS[lead.priority]}`}>{lead.priority === 'hot' ? '🔥' : lead.priority === 'warm' ? '🌤' : '❄️'} {lead.priority}</span>
                 {lead.interested_in && <span className="badge bg-indigo-50 text-indigo-700">{INTEREST_LABELS[lead.interested_in]}</span>}
-                <span className="text-gray-300">|</span>
+                <span className="text-gray-300 hidden sm:inline">|</span>
                 <a href={`tel:${lead.phone}`} className="text-sm font-mono text-sky-600 hover:underline">{lead.phone}</a>
                 {lead.city && <span className="text-xs text-gray-400">📍 {lead.city}</span>}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <button onClick={() => setModal('call')} className="btn-primary flex items-center gap-1.5 text-sm">
                 <PhoneIcon className="w-3.5 h-3.5"/> Log Call
               </button>
@@ -157,12 +185,23 @@ export default function LeadDetail() {
               <button onClick={() => setModal('followup')} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <CalendarIcon className="w-3.5 h-3.5"/> Follow-Up
               </button>
+              {['admin','manager'].includes(user?.role) && lead.status !== 'converted' && (
+                <button onClick={() => setShowConvert(true)} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Convert
+                </button>
+              )}
+              {lead.status === 'converted' && (
+                <Link to={`/clients`} className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors flex items-center gap-1.5">
+                  View Client
+                </Link>
+              )}
             </div>
           </div>
 
           {/* Pipeline bar */}
           {lead.status !== 'lost' && lead.status !== 'junk' && (
-            <div className="mt-5 flex items-center gap-1">
+            <div className="mt-5 flex items-center gap-1 overflow-x-auto pb-1">
               {PIPELINE.map((s, i) => (
                 <React.Fragment key={s}>
                   <button
@@ -203,10 +242,10 @@ export default function LeadDetail() {
       </div>
 
       {/* ── Body ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         {/* Left sidebar */}
-        <div className="col-span-4 space-y-4">
+        <div className="lg:col-span-4 space-y-4">
 
           {/* Contact Info */}
           <div className="card p-4">
@@ -375,7 +414,7 @@ export default function LeadDetail() {
         </div>
 
         {/* Right main area */}
-        <div className="col-span-8 card overflow-hidden">
+        <div className="lg:col-span-8 card overflow-hidden">
           {/* Tabs */}
           <div className="flex border-b border-gray-100 bg-gray-50">
             {[
@@ -432,6 +471,57 @@ export default function LeadDetail() {
       {modal === 'call'     && <LogCallModal lead={lead} onClose={() => setModal(null)} onSuccess={() => { setModal(null); load(); }}/>}
       {modal === 'note'     && <AddNoteModal lead={lead} onClose={() => setModal(null)} onSuccess={() => { setModal(null); load(); }}/>}
       {modal === 'followup' && <ScheduleFollowUpModal lead={lead} onClose={() => setModal(null)} onSuccess={() => { setModal(null); load(); }}/>}
+
+      {/* Convert to Client Modal */}
+      {showConvert && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Convert to Client</h2>
+              <p className="text-sm text-gray-400">Convert {lead.full_name} to an active client</p>
+            </div>
+            <form onSubmit={handleConvertToClient} className="p-5 space-y-4">
+              <div>
+                <label className="label">Assign Dietitian</label>
+                <select className="select" value={convertForm.dietitian_id} onChange={e => setConvertForm(f => ({ ...f, dietitian_id: e.target.value }))}>
+                  <option value="">Select dietitian</option>
+                  {users.filter(u => ['dietician','sales_agent'].includes(u.role)).map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Program Type</label>
+                <input className="input" value={convertForm.program_type} onChange={e => setConvertForm(f => ({ ...f, program_type: e.target.value }))} placeholder="e.g. weight_loss, diabetes_reversal" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Start Date *</label>
+                  <input className="input" type="date" value={convertForm.start_date} onChange={e => setConvertForm(f => ({ ...f, start_date: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="label">End Date</label>
+                  <input className="input" type="date" value={convertForm.end_date} onChange={e => setConvertForm(f => ({ ...f, end_date: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="label">Target Weight (kg)</label>
+                <input className="input" type="number" step="0.1" value={convertForm.target_weight_kg} onChange={e => setConvertForm(f => ({ ...f, target_weight_kg: e.target.value }))} placeholder="e.g. 65" />
+              </div>
+              <div>
+                <label className="label">Notes</label>
+                <textarea className="input resize-none" rows={3} value={convertForm.notes} onChange={e => setConvertForm(f => ({ ...f, notes: e.target.value }))} placeholder="Special dietary needs, goals, preferences..." />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowConvert(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors" disabled={converting}>
+                  {converting ? 'Converting...' : 'Convert to Client'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

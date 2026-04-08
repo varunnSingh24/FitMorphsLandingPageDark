@@ -33,7 +33,7 @@ function initializeDatabase() {
       secondary_phone TEXT,
       gender TEXT CHECK(gender IN ('male','female','other')),
       age INTEGER,
-      source TEXT CHECK(source IN ('walk_in','instagram','facebook','google_ads','referral','website','phone_inquiry','other')),
+      source TEXT,
       source_detail TEXT,
       status TEXT DEFAULT 'new' CHECK(status IN ('new','contacted','interested','follow_up','negotiation','converted','lost','junk')),
       assigned_to INTEGER REFERENCES users(id),
@@ -102,7 +102,110 @@ function initializeDatabase() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS clients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL REFERENCES leads(id),
+      dietitian_id INTEGER REFERENCES users(id),
+      program_type TEXT DEFAULT 'custom',
+      start_date TEXT NOT NULL,
+      end_date TEXT,
+      current_weight_kg REAL,
+      target_weight_kg REAL,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active','paused','completed','dropped')),
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS checkins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      dietitian_id INTEGER NOT NULL REFERENCES users(id),
+      checkin_type TEXT NOT NULL CHECK(checkin_type IN ('food_review','weekly_call','monthly_assessment','adhoc_call')),
+      weight_kg REAL,
+      compliance TEXT CHECK(compliance IN ('excellent','good','average','poor')),
+      energy_level TEXT CHECK(energy_level IN ('high','moderate','low','very_low')),
+      notes TEXT,
+      next_checkin_date TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      reminder_type TEXT NOT NULL CHECK(reminder_type IN ('lead_followup','checkin','custom')),
+      ref_type TEXT,
+      ref_id INTEGER,
+      title TEXT NOT NULL,
+      message TEXT,
+      due_at TEXT NOT NULL,
+      snoozed_until TEXT,
+      is_done INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
+
+  // Seed default settings
+  const settingsCount = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
+  if (settingsCount === 0) {
+    const defaultSources = JSON.stringify([
+      { key: 'walk_in', label: 'Walk-in' },
+      { key: 'instagram', label: 'Instagram' },
+      { key: 'facebook', label: 'Facebook' },
+      { key: 'google_ads', label: 'Google Ads' },
+      { key: 'referral', label: 'Referral' },
+      { key: 'website', label: 'Website' },
+      { key: 'phone_inquiry', label: 'Phone Inquiry' },
+      { key: 'whatsapp', label: 'WhatsApp' },
+      { key: 'other', label: 'Other' },
+    ]);
+    const defaultPrograms = JSON.stringify([
+      { key: '3_month', label: '3 Month Program' },
+      { key: '6_month', label: '6 Month Program' },
+      { key: '12_month', label: '12 Month Program' },
+      { key: 'custom', label: 'Custom' },
+    ]);
+    db.prepare("INSERT INTO settings (key, value) VALUES ('lead_sources', ?)").run(defaultSources);
+    db.prepare("INSERT INTO settings (key, value) VALUES ('program_types', ?)").run(defaultPrograms);
+  }
+
+  // Migration: remove hardcoded source CHECK from leads table (sources are now configurable)
+  const leadsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='leads'").get();
+  if (leadsSchema && leadsSchema.sql.includes("source TEXT CHECK")) {
+    db.exec(`
+      CREATE TABLE leads_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT NOT NULL,
+        secondary_phone TEXT,
+        gender TEXT CHECK(gender IN ('male','female','other')),
+        age INTEGER,
+        source TEXT,
+        source_detail TEXT,
+        status TEXT DEFAULT 'new' CHECK(status IN ('new','contacted','interested','follow_up','negotiation','converted','lost','junk')),
+        assigned_to INTEGER REFERENCES users(id),
+        priority TEXT DEFAULT 'warm' CHECK(priority IN ('hot','warm','cold')),
+        interested_in TEXT CHECK(interested_in IN ('weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other')),
+        notes TEXT,
+        city TEXT,
+        locality TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      INSERT INTO leads_new SELECT * FROM leads;
+      DROP TABLE leads;
+      ALTER TABLE leads_new RENAME TO leads;
+    `);
+    console.log('Migrated leads table: removed hardcoded source CHECK constraint');
+  }
 
   // Migration: update CHECK constraint to include dietician role
   const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
@@ -123,6 +226,55 @@ function initializeDatabase() {
       ALTER TABLE users_new RENAME TO users;
     `);
     console.log('Migrated users table: added dietician role');
+  }
+
+  // Migration: update clients table to use 'paused' instead of 'on_hold'
+  const clientsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='clients'").get();
+  if (clientsSchema && clientsSchema.sql.includes('on_hold')) {
+    db.exec(`
+      UPDATE clients SET status = 'paused' WHERE status = 'on_hold';
+      CREATE TABLE clients_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL REFERENCES leads(id),
+        dietitian_id INTEGER REFERENCES users(id),
+        program_type TEXT DEFAULT 'custom',
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        current_weight_kg REAL,
+        target_weight_kg REAL,
+        status TEXT DEFAULT 'active' CHECK(status IN ('active','paused','completed','dropped')),
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      INSERT INTO clients_new SELECT * FROM clients;
+      DROP TABLE clients;
+      ALTER TABLE clients_new RENAME TO clients;
+    `);
+    console.log('Migrated clients table: on_hold → paused');
+  }
+
+  // Migration: update checkins table to add 'excellent' compliance and 'very_low' energy
+  const checkinsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='checkins'").get();
+  if (checkinsSchema && !checkinsSchema.sql.includes('excellent')) {
+    db.exec(`
+      CREATE TABLE checkins_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL REFERENCES clients(id),
+        dietitian_id INTEGER NOT NULL REFERENCES users(id),
+        checkin_type TEXT NOT NULL CHECK(checkin_type IN ('food_review','weekly_call','monthly_assessment','adhoc_call')),
+        weight_kg REAL,
+        compliance TEXT CHECK(compliance IN ('excellent','good','average','poor')),
+        energy_level TEXT CHECK(energy_level IN ('high','moderate','low','very_low')),
+        notes TEXT,
+        next_checkin_date TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      INSERT INTO checkins_new SELECT * FROM checkins;
+      DROP TABLE checkins;
+      ALTER TABLE checkins_new RENAME TO checkins;
+    `);
+    console.log('Migrated checkins table: added excellent/very_low options');
   }
 
   seedIfEmpty(db);
