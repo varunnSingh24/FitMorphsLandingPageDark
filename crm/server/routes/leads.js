@@ -14,7 +14,7 @@ router.get('/', (req, res) => {
   let conditions = [];
   const params = [];
 
-  if (role === 'sales_agent') {
+  if (['sales_agent','dietician'].includes(role)) {
     conditions.push('l.assigned_to = ?');
     params.push(userId);
   } else if (assigned_to) {
@@ -91,7 +91,7 @@ router.get('/:id', (req, res) => {
   `).get(req.params.id);
 
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  if (role === 'sales_agent' && lead.assigned_to !== userId) {
+  if (['sales_agent','dietician'].includes(role) && lead.assigned_to !== userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -105,7 +105,7 @@ router.put('/:id', (req, res) => {
 
   const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  if (role === 'sales_agent' && lead.assigned_to !== userId) {
+  if (['sales_agent','dietician'].includes(role) && lead.assigned_to !== userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -139,7 +139,7 @@ router.put('/:id/status', (req, res) => {
 
   const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  if (role === 'sales_agent' && lead.assigned_to !== userId) {
+  if (['sales_agent','dietician'].includes(role) && lead.assigned_to !== userId) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -179,7 +179,7 @@ router.get('/:id/medical', (req, res) => {
   const { role, id: userId } = req.user;
   const lead = db.prepare('SELECT id, assigned_to FROM leads WHERE id = ?').get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  if (role === 'sales_agent' && lead.assigned_to !== userId) return res.status(403).json({ error: 'Access denied' });
+  if (['sales_agent','dietician'].includes(role) && lead.assigned_to !== userId) return res.status(403).json({ error: 'Access denied' });
 
   const medical = db.prepare('SELECT * FROM medical_histories WHERE lead_id = ?').get(req.params.id);
   res.json({ medical: medical || null });
@@ -191,7 +191,7 @@ router.put('/:id/medical', (req, res) => {
   const { role, id: userId } = req.user;
   const lead = db.prepare('SELECT id, assigned_to FROM leads WHERE id = ?').get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
-  if (role === 'sales_agent' && lead.assigned_to !== userId) return res.status(403).json({ error: 'Access denied' });
+  if (['sales_agent','dietician'].includes(role) && lead.assigned_to !== userId) return res.status(403).json({ error: 'Access denied' });
 
   const {
     height_cm, weight_kg, blood_group, health_conditions,

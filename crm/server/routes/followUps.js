@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
   const { filter = 'upcoming' } = req.query;
 
   const today = new Date().toISOString().split('T')[0];
-  const whereUser = role === 'sales_agent' ? `AND f.assigned_to = ${userId}` : '';
+  const whereUser = ['sales_agent','dietician'].includes(role) ? `AND f.assigned_to = ${userId}` : '';
 
   let dateCondition = '';
   if (filter === 'today') dateCondition = `AND f.follow_up_date = '${today}'`;

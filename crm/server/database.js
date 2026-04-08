@@ -19,7 +19,7 @@ function initializeDatabase() {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('admin','manager','sales_agent')),
+      role TEXT NOT NULL CHECK(role IN ('admin','manager','sales_agent','dietician')),
       phone TEXT,
       is_active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now'))

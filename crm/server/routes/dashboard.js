@@ -9,7 +9,7 @@ router.get('/stats', (req, res) => {
   const db = getDb();
   const { role, id: userId } = req.user;
 
-  const whereClause = role === 'sales_agent' ? `WHERE l.assigned_to = ${userId}` : '';
+  const whereClause = ['sales_agent','dietician'].includes(role) ? `WHERE l.assigned_to = ${userId}` : '';
   const today = new Date().toISOString().split('T')[0];
 
   const total = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause}`).get().c;
@@ -26,7 +26,7 @@ router.get('/stats', (req, res) => {
   });
 
   // Recent activity
-  const activityWhere = role === 'sales_agent' ? `WHERE a.user_id = ${userId}` : '';
+  const activityWhere = ['sales_agent','dietician'].includes(role) ? `WHERE a.user_id = ${userId}` : '';
   const recentActivity = db.prepare(`
     SELECT a.*, u.name as user_name, l.full_name as lead_name
     FROM activities a
@@ -45,7 +45,7 @@ router.get('/follow-ups-today', (req, res) => {
   const { role, id: userId } = req.user;
   const today = new Date().toISOString().split('T')[0];
 
-  const whereUser = role === 'sales_agent' ? `AND f.assigned_to = ${userId}` : '';
+  const whereUser = ['sales_agent','dietician'].includes(role) ? `AND f.assigned_to = ${userId}` : '';
 
   const followUps = db.prepare(`
     SELECT f.*, l.full_name as lead_name, l.phone as lead_phone, l.status as lead_status,
@@ -64,7 +64,7 @@ router.get('/team-performance', (req, res) => {
   const db = getDb();
   const { role } = req.user;
 
-  if (role === 'sales_agent') {
+  if (['sales_agent','dietician'].includes(role)) {
     return res.status(403).json({ error: 'Access denied' });
   }
 
@@ -79,7 +79,7 @@ router.get('/team-performance', (req, res) => {
       (SELECT COUNT(*) FROM call_logs WHERE called_by = u.id AND date(created_at) = '${today}') as calls_today,
       (SELECT COUNT(*) FROM leads WHERE assigned_to = u.id AND status = 'converted' AND date(updated_at) >= '${monthStartStr}') as conversions_this_month
     FROM users u
-    WHERE u.is_active = 1 AND u.role IN ('sales_agent', 'manager')
+    WHERE u.is_active = 1 AND u.role IN ('sales_agent', 'manager', 'dietician')
     ORDER BY total_leads DESC
   `).all();
 

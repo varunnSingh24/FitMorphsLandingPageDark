@@ -60,7 +60,7 @@ router.get('/agent-performance', (req, res) => {
       ROUND(100.0 * SUM(CASE WHEN l.status = 'converted' THEN 1 ELSE 0 END) / NULLIF(COUNT(DISTINCT l.id), 0), 1) as conversion_rate
     FROM users u
     LEFT JOIN leads l ON l.assigned_to = u.id ${leadDateWhere}
-    WHERE u.is_active = 1 AND u.role IN ('sales_agent', 'manager')
+    WHERE u.is_active = 1 AND u.role IN ('sales_agent', 'manager', 'dietician')
     GROUP BY u.id
     ORDER BY total_leads DESC
   `).all(...params, ...(date_from ? params.slice(0, 1) : []), ...(date_to ? params.slice(-1) : []));
