@@ -176,6 +176,9 @@ function initializeDatabase() {
     db.prepare("INSERT INTO settings (key, value) VALUES ('program_types', ?)").run(defaultPrograms);
   }
 
+  // Disable foreign keys for migrations (re-enabled after)
+  db.pragma('foreign_keys = OFF');
+
   // Migration: remove hardcoded source CHECK from leads table (sources are now configurable)
   const leadsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='leads'").get();
   if (leadsSchema && leadsSchema.sql.includes("source TEXT CHECK")) {
@@ -280,6 +283,9 @@ function initializeDatabase() {
     `);
     console.log('Migrated checkins table: added excellent/very_low options');
   }
+
+  // Re-enable foreign keys after migrations
+  db.pragma('foreign_keys = ON');
 
   seedIfEmpty(db);
 }
