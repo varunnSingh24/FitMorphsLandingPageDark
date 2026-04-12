@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
-const SOURCES = ['walk_in','instagram','facebook','google_ads','referral','website','phone_inquiry','other'];
+const DEFAULT_SOURCES = [
+  { key: 'walk_in', label: 'Walk-in' }, { key: 'instagram', label: 'Instagram' },
+  { key: 'facebook', label: 'Facebook' }, { key: 'google_ads', label: 'Google Ads' },
+  { key: 'referral', label: 'Referral' }, { key: 'website', label: 'Website' },
+  { key: 'phone_inquiry', label: 'Phone Inquiry' }, { key: 'other', label: 'Other' },
+];
 const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost'];
 const INTERESTS = ['weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other'];
-const SOURCE_LABELS   = { walk_in:'Walk-in', instagram:'Instagram', facebook:'Facebook', google_ads:'Google Ads', referral:'Referral', website:'Website', phone_inquiry:'Phone Inquiry', other:'Other' };
 const INTEREST_LABELS = { weight_loss:'Weight Loss', muscle_gain:'Muscle Gain', yoga:'Yoga', crossfit:'CrossFit', personal_training:'Personal Training', group_classes:'Group Classes', diet_plan:'Diet Plan', other:'Other' };
 
 const HEALTH_CONDITIONS = [
@@ -40,6 +44,7 @@ export default function AddLead() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
+  const [sources, setSources] = useState(DEFAULT_SOURCES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showMedical, setShowMedical] = useState(false);
@@ -71,6 +76,11 @@ export default function AddLead() {
     }));
 
   useEffect(() => {
+    // Fetch dynamic sources from settings
+    api.get('/settings/lead_sources').then(r => {
+      if (r.data.value && Array.isArray(r.data.value)) setSources(r.data.value);
+    }).catch(() => {});
+
     if (['admin','manager'].includes(user?.role)) {
       api.get('/users').then(r => {
         setUsers(r.data.users.filter(u => ['sales_agent','manager','dietician'].includes(u.role)));
@@ -181,7 +191,7 @@ export default function AddLead() {
               <label className="label">Lead Source</label>
               <select className="select" value={form.source} onChange={e => set('source', e.target.value)}>
                 <option value="">Select source</option>
-                {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
+                {sources.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </div>
             <div>
