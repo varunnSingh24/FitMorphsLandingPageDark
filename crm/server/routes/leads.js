@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { IST_SQL_SHIFT } = require('../utils/ist');
 
 const router = express.Router();
 router.use(authenticate);
@@ -25,8 +26,8 @@ router.get('/', (req, res) => {
   if (status) { conditions.push('l.status = ?'); params.push(status); }
   if (source) { conditions.push('l.source = ?'); params.push(source); }
   if (priority) { conditions.push('l.priority = ?'); params.push(priority); }
-  if (date_from) { conditions.push("date(l.created_at) >= ?"); params.push(date_from); }
-  if (date_to) { conditions.push("date(l.created_at) <= ?"); params.push(date_to); }
+  if (date_from) { conditions.push(`date(l.created_at, ${IST_SQL_SHIFT}) >= ?`); params.push(date_from); }
+  if (date_to) { conditions.push(`date(l.created_at, ${IST_SQL_SHIFT}) <= ?`); params.push(date_to); }
   if (search) {
     conditions.push('(l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)');
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);

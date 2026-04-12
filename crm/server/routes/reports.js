@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { istToday, istWeekStart, istMonthStart, IST_SQL_SHIFT } = require('../utils/ist');
 
 const router = express.Router();
 router.use(authenticate, requireRole('admin', 'manager'));
@@ -35,27 +36,22 @@ router.get('/agent-performance', (req, res) => {
   const db = getDb();
   const { date_from, date_to } = req.query;
 
-  const today = new Date().toISOString().split('T')[0];
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 7);
-  const weekStartStr = weekStart.toISOString().split('T')[0];
-
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  const monthStartStr = monthStart.toISOString().split('T')[0];
+  const today = istToday();
+  const weekStartStr = istWeekStart();
+  const monthStartStr = istMonthStart();
 
   let leadDateWhere = '';
   const params = [];
-  if (date_from) { leadDateWhere += ' AND date(l.created_at) >= ?'; params.push(date_from); }
-  if (date_to) { leadDateWhere += ' AND date(l.created_at) <= ?'; params.push(date_to); }
+  if (date_from) { leadDateWhere += ` AND date(l.created_at, ${IST_SQL_SHIFT}) >= ?`; params.push(date_from); }
+  if (date_to) { leadDateWhere += ` AND date(l.created_at, ${IST_SQL_SHIFT}) <= ?`; params.push(date_to); }
 
   const agents = db.prepare(`
     SELECT
       u.id, u.name, u.email,
       COUNT(DISTINCT l.id) as total_leads,
-      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id ${date_from ? 'AND date(cl.created_at) >= ?' : ''} ${date_to ? 'AND date(cl.created_at) <= ?' : ''}) as total_calls,
-      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id AND date(cl.created_at) >= '${weekStartStr}') as calls_this_week,
-      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id AND date(cl.created_at) >= '${monthStartStr}') as calls_this_month,
+      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id ${date_from ? `AND date(cl.created_at, ${IST_SQL_SHIFT}) >= ?` : ''} ${date_to ? `AND date(cl.created_at, ${IST_SQL_SHIFT}) <= ?` : ''}) as total_calls,
+      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id AND date(cl.created_at, ${IST_SQL_SHIFT}) >= '${weekStartStr}') as calls_this_week,
+      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id AND date(cl.created_at, ${IST_SQL_SHIFT}) >= '${monthStartStr}') as calls_this_month,
       SUM(CASE WHEN l.status = 'converted' THEN 1 ELSE 0 END) as conversions,
       ROUND(100.0 * SUM(CASE WHEN l.status = 'converted' THEN 1 ELSE 0 END) / NULLIF(COUNT(DISTINCT l.id), 0), 1) as conversion_rate
     FROM users u
