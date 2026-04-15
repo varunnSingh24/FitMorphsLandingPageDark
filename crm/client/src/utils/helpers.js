@@ -1,7 +1,19 @@
+// Parse a DB timestamp as UTC (DB stores UTC via datetime('now'))
+function parseUTC(dateStr) {
+  if (!dateStr) return null;
+  // If it already has timezone info (T, Z, +), parse as-is
+  if (dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
+  // Date-only strings like "2026-04-12" — treat as IST midnight (no UTC shift)
+  if (dateStr.length === 10) return new Date(dateStr + 'T00:00:00+05:30');
+  // Full datetime without timezone like "2026-04-12 10:30:00" — it's UTC from the DB
+  return new Date(dateStr.replace(' ', 'T') + 'Z');
+}
+
 // Format datetime to IST
 export function formatDateTime(dateStr) {
   if (!dateStr) return '—';
-  const d = new Date(dateStr + (dateStr.includes('T') ? '' : ' UTC+0530'));
+  const d = parseUTC(dateStr);
+  if (!d || isNaN(d)) return '—';
   return d.toLocaleString('en-IN', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit', month: 'short', year: 'numeric',
@@ -11,8 +23,12 @@ export function formatDateTime(dateStr) {
 
 export function formatDate(dateStr) {
   if (!dateStr) return '—';
-  const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const d = parseUTC(dateStr);
+  if (!d || isNaN(d)) return '—';
+  return d.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
 }
 
 export function formatDuration(seconds) {
@@ -25,8 +41,10 @@ export function formatDuration(seconds) {
 export function timeAgo(dateStr) {
   if (!dateStr) return '';
   const now = new Date();
-  const past = new Date(dateStr);
+  const past = parseUTC(dateStr);
+  if (!past || isNaN(past)) return '';
   const diff = Math.floor((now - past) / 1000);
+  if (diff < 0) return 'just now';
   if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;

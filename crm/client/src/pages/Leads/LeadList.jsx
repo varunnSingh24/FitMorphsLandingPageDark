@@ -2,12 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, SOURCE_LABELS, timeAgo } from '../../utils/helpers';
+import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, timeAgo } from '../../utils/helpers';
 import LogCallModal from '../../components/LogCallModal';
 
 const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
 const PRIORITIES = ['hot','warm','cold'];
-const SOURCES = ['walk_in','instagram','facebook','google_ads','referral','website','phone_inquiry','other'];
+const DEFAULT_SOURCES = [
+  { key: 'walk_in', label: 'Walk-in' }, { key: 'instagram', label: 'Instagram' },
+  { key: 'facebook', label: 'Facebook' }, { key: 'google_ads', label: 'Google Ads' },
+  { key: 'referral', label: 'Referral' }, { key: 'website', label: 'Website' },
+  { key: 'phone_inquiry', label: 'Phone Inquiry' }, { key: 'other', label: 'Other' },
+];
 
 export default function LeadList() {
   const { user } = useAuth();
@@ -19,6 +24,7 @@ export default function LeadList() {
   const [selected, setSelected] = useState([]);
   const [callLead, setCallLead] = useState(null);
   const [bulkAssignTo, setBulkAssignTo] = useState('');
+  const [sources, setSources] = useState(DEFAULT_SOURCES);
 
   const [filters, setFilters] = useState({
     search: '', status: '', source: '', assigned_to: '', priority: '',
@@ -41,6 +47,11 @@ export default function LeadList() {
   useEffect(() => { loadLeads(); }, [loadLeads]);
 
   useEffect(() => {
+    // Fetch dynamic sources from settings
+    api.get('/settings/lead_sources').then(r => {
+      if (r.data.value && Array.isArray(r.data.value)) setSources(r.data.value);
+    }).catch(() => {});
+
     if (['admin', 'manager'].includes(user?.role)) {
       api.get('/users').then(r => setUsers(r.data.users));
     }
@@ -101,7 +112,7 @@ export default function LeadList() {
           </select>
           <select className="select" value={filters.source} onChange={e => setFilter('source', e.target.value)}>
             <option value="">All Sources</option>
-            {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
+            {sources.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
           {['admin', 'manager'].includes(user?.role) && (
             <select className="select" value={filters.assigned_to} onChange={e => setFilter('assigned_to', e.target.value)}>
@@ -172,7 +183,7 @@ export default function LeadList() {
                   </td>
                   <td className="table-td font-mono text-xs" onClick={() => navigate(`/leads/${lead.id}`)}>{lead.phone}</td>
                   <td className="table-td" onClick={() => navigate(`/leads/${lead.id}`)}>
-                    <span className="text-xs text-gray-600">{SOURCE_LABELS[lead.source] || lead.source || '—'}</span>
+                    <span className="text-xs text-gray-600">{sources.find(s => s.key === lead.source)?.label || lead.source || '—'}</span>
                   </td>
                   <td className="table-td" onClick={() => navigate(`/leads/${lead.id}`)}>
                     <span className={`badge ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>

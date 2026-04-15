@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { istToday } = require('../utils/ist');
 
 const router = express.Router();
 router.use(authenticate);
@@ -11,7 +12,7 @@ router.get('/', (req, res) => {
   const { role, id: userId } = req.user;
   const { filter = 'upcoming' } = req.query;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
   const whereUser = ['sales_agent','dietician'].includes(role) ? `AND f.assigned_to = ${userId}` : '';
 
   let dateCondition = '';

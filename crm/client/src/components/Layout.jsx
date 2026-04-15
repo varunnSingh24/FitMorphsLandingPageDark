@@ -216,7 +216,7 @@ export default function Layout() {
                     ) : (
                       <div className="divide-y divide-gray-50">
                         {reminders.map(r => {
-                          const isOverdue = new Date(r.due_at) <= new Date();
+                          const isOverdue = parseUTCDate(r.due_at) <= new Date();
                           return (
                             <div key={r.id} className={`p-3 hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/50' : ''}`}>
                               <div className="flex items-start gap-2">
@@ -298,9 +298,18 @@ export default function Layout() {
   );
 }
 
+// Parse DB UTC timestamp correctly
+function parseUTCDate(dateStr) {
+  if (!dateStr) return null;
+  if (dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
+  if (dateStr.length === 10) return new Date(dateStr + 'T00:00:00+05:30');
+  return new Date(dateStr.replace(' ', 'T') + 'Z');
+}
+
 function formatReminderTime(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseUTCDate(dateStr);
+  if (!d || isNaN(d)) return '';
   const now = new Date();
   const diffMs = d - now;
   const diffMin = Math.abs(Math.floor(diffMs / 60000));
@@ -314,7 +323,7 @@ function formatReminderTime(dateStr) {
   // Upcoming
   if (diffMin < 60) return `in ${diffMin}m`;
   if (diffMin < 1440) return `in ${Math.floor(diffMin / 60)}h`;
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function HomeIcon({ className }) {

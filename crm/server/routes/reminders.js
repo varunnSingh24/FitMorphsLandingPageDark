@@ -61,10 +61,12 @@ router.put('/:id/snooze', (req, res) => {
   let snoozeUntil;
   if (duration === '1h') snoozeUntil = new Date(now.getTime() + 3600000);
   else if (duration === '3h') snoozeUntil = new Date(now.getTime() + 10800000);
-  else { // tomorrow 9am
-    snoozeUntil = new Date(now);
-    snoozeUntil.setDate(snoozeUntil.getDate() + 1);
-    snoozeUntil.setHours(9, 0, 0, 0);
+  else { // tomorrow 9am IST = 3:30 AM UTC
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(now.getTime() + IST_OFFSET);
+    nowIST.setDate(nowIST.getDate() + 1);
+    nowIST.setHours(9, 0, 0, 0); // 9 AM IST
+    snoozeUntil = new Date(nowIST.getTime() - IST_OFFSET); // convert back to UTC
   }
 
   db.prepare('UPDATE reminders SET snoozed_until = ? WHERE id = ?')
