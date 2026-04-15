@@ -42,14 +42,14 @@ router.get('/agent-performance', (req, res) => {
 
   let leadDateWhere = '';
   const params = [];
-  if (date_from) { leadDateWhere += ' AND date(l.created_at) >= ?'; params.push(date_from); }
-  if (date_to) { leadDateWhere += ' AND date(l.created_at) <= ?'; params.push(date_to); }
+  if (date_from) { leadDateWhere += ` AND date(l.created_at) >= ?`; params.push(date_from); }
+  if (date_to) { leadDateWhere += ` AND date(l.created_at) <= ?`; params.push(date_to); }
 
   const agents = db.prepare(`
     SELECT
       u.id, u.name, u.email,
       COUNT(DISTINCT l.id) as total_leads,
-      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id ${date_from ? 'AND date(cl.created_at) >= ?' : ''} ${date_to ? 'AND date(cl.created_at) <= ?' : ''}) as total_calls,
+      (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id ${date_from ? `AND date(cl.created_at) >= ?` : ''} ${date_to ? `AND date(cl.created_at) <= ?` : ''}) as total_calls,
       (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id AND date(cl.created_at) >= '${weekStartStr}') as calls_this_week,
       (SELECT COUNT(*) FROM call_logs cl WHERE cl.called_by = u.id AND date(cl.created_at) >= '${monthStartStr}') as calls_this_month,
       SUM(CASE WHEN l.status = 'converted' THEN 1 ELSE 0 END) as conversions,
