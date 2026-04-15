@@ -298,12 +298,12 @@ export default function Layout() {
   );
 }
 
-// Parse DB UTC timestamp correctly
+// Parse DB IST timestamp correctly (DB stores as IST, no tz suffix)
 function parseUTCDate(dateStr) {
   if (!dateStr) return null;
   if (dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
-  if (dateStr.length === 10) return new Date(dateStr + 'T00:00:00+05:30');
-  return new Date(dateStr.replace(' ', 'T') + 'Z');
+  const iso = dateStr.replace(' ', 'T');
+  return new Date(iso + '+05:30');
 }
 
 function formatReminderTime(dateStr) {
