@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { istToday } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -10,7 +11,7 @@ router.get('/stats', (req, res) => {
   const { role, id: userId } = req.user;
 
   const whereClause = ['sales_agent','dietician'].includes(role) ? `WHERE l.assigned_to = ${userId}` : '';
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
 
   const total = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause}`).get().c;
   const newToday = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} date(l.created_at) = '${today}'`).get().c;
@@ -43,7 +44,7 @@ router.get('/stats', (req, res) => {
 router.get('/follow-ups-today', (req, res) => {
   const db = getDb();
   const { role, id: userId } = req.user;
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
 
   const whereUser = ['sales_agent','dietician'].includes(role) ? `AND f.assigned_to = ${userId}` : '';
 
@@ -68,10 +69,8 @@ router.get('/team-performance', (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  const monthStartStr = monthStart.toISOString().split('T')[0];
+  const today = istToday();
+  const monthStartStr = istToday().slice(0, 7) + '-01'; // YYYY-MM-01 in IST
 
   const agents = db.prepare(`
     SELECT u.id, u.name, u.email, u.role,

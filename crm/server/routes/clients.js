@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { istNow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -99,7 +100,7 @@ router.post('/', requireRole('admin', 'manager'), (req, res) => {
   // Get current weight from medical history
   const medical = db.prepare('SELECT weight_kg FROM medical_histories WHERE lead_id = ?').get(lead_id);
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   const result = db.prepare(`
     INSERT INTO clients (lead_id, dietitian_id, program_type, start_date, end_date,
       current_weight_kg, target_weight_kg, notes, created_at, updated_at)
@@ -133,7 +134,7 @@ router.put('/:id', (req, res) => {
   const { dietitian_id, program_type, start_date, end_date, current_weight_kg,
     target_weight_kg, status, notes } = req.body;
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   db.prepare(`
     UPDATE clients SET dietitian_id=?, program_type=?, start_date=?, end_date=?,
       current_weight_kg=?, target_weight_kg=?, status=?, notes=?, updated_at=?
@@ -167,7 +168,7 @@ router.post('/:id/checkins', (req, res) => {
   const { checkin_type, weight_kg, compliance, energy_level, notes, next_checkin_date } = req.body;
   if (!checkin_type) return res.status(400).json({ error: 'checkin_type required' });
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
 
   const result = db.prepare(`
     INSERT INTO checkins (client_id, dietitian_id, checkin_type, weight_kg, compliance, energy_level, notes, next_checkin_date)

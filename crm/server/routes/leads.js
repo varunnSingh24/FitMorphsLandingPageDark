@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { istNow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -59,7 +60,7 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Name and phone are required' });
   }
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   const result = db.prepare(`
     INSERT INTO leads (full_name, email, phone, secondary_phone, gender, age, source, source_detail,
       status, assigned_to, priority, interested_in, notes, city, locality, created_at, updated_at)
@@ -112,7 +113,7 @@ router.put('/:id', (req, res) => {
   const { full_name, email, phone, secondary_phone, gender, age, source, source_detail,
     priority, interested_in, notes, city, locality } = req.body;
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   db.prepare(`
     UPDATE leads SET full_name=?, email=?, phone=?, secondary_phone=?, gender=?, age=?,
       source=?, source_detail=?, priority=?, interested_in=?, notes=?, city=?, locality=?, updated_at=?
@@ -143,7 +144,7 @@ router.put('/:id/status', (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   db.prepare('UPDATE leads SET status = ?, updated_at = ? WHERE id = ?').run(status, now, lead.id);
 
   db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'status_change', ?)`)
@@ -164,7 +165,7 @@ router.put('/:id/assign', requireRole('admin', 'manager'), (req, res) => {
   const agent = db.prepare('SELECT * FROM users WHERE id = ?').get(assigned_to);
   if (!agent) return res.status(404).json({ error: 'User not found' });
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   db.prepare('UPDATE leads SET assigned_to = ?, updated_at = ? WHERE id = ?').run(assigned_to, now, lead.id);
 
   db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'assignment_change', ?)`)
@@ -202,7 +203,7 @@ router.put('/:id/medical', (req, res) => {
     additional_notes,
   } = req.body;
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   const existing = db.prepare('SELECT id FROM medical_histories WHERE lead_id = ?').get(lead.id);
   const conditionsJson = Array.isArray(health_conditions) ? JSON.stringify(health_conditions) : (health_conditions || null);
 
@@ -256,7 +257,7 @@ router.post('/bulk-assign', requireRole('admin', 'manager'), (req, res) => {
   const agent = db.prepare('SELECT * FROM users WHERE id = ?').get(assigned_to);
   if (!agent) return res.status(404).json({ error: 'User not found' });
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   const stmt = db.prepare('UPDATE leads SET assigned_to = ?, updated_at = ? WHERE id = ?');
   const actStmt = db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'assignment_change', ?)`);
 

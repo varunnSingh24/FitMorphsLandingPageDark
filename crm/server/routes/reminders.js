@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { istNow, istFuture, istTomorrow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -9,7 +10,7 @@ router.use(authenticate);
 router.get('/', (req, res) => {
   const db = getDb();
   const { id: userId } = req.user;
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
 
   const reminders = db.prepare(`
     SELECT r.*,
@@ -57,18 +58,13 @@ router.put('/:id/snooze', (req, res) => {
   const reminder = db.prepare('SELECT * FROM reminders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!reminder) return res.status(404).json({ error: 'Reminder not found' });
 
-  const now = new Date();
   let snoozeUntil;
-  if (duration === '1h') snoozeUntil = new Date(now.getTime() + 3600000);
-  else if (duration === '3h') snoozeUntil = new Date(now.getTime() + 10800000);
-  else { // tomorrow 9am
-    snoozeUntil = new Date(now);
-    snoozeUntil.setDate(snoozeUntil.getDate() + 1);
-    snoozeUntil.setHours(9, 0, 0, 0);
-  }
+  if (duration === '1h')      snoozeUntil = istFuture(3600000);
+  else if (duration === '3h') snoozeUntil = istFuture(10800000);
+  else                        snoozeUntil = istTomorrow('09:00:00'); // tomorrow 9am IST
 
   db.prepare('UPDATE reminders SET snoozed_until = ? WHERE id = ?')
-    .run(snoozeUntil.toISOString().replace('T', ' ').split('.')[0], reminder.id);
+    .run(snoozeUntil, reminder.id);
 
   res.json({ success: true });
 });

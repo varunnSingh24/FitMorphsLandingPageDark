@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { istToday } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate, requireRole('admin', 'manager'));
@@ -35,14 +36,9 @@ router.get('/agent-performance', (req, res) => {
   const db = getDb();
   const { date_from, date_to } = req.query;
 
-  const today = new Date().toISOString().split('T')[0];
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 7);
-  const weekStartStr = weekStart.toISOString().split('T')[0];
-
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  const monthStartStr = monthStart.toISOString().split('T')[0];
+  const today = istToday();
+  const weekStartStr  = new Date(Date.now() + 5.5 * 60 * 60 * 1000 - 7 * 86400000).toISOString().split('T')[0];
+  const monthStartStr = istToday().slice(0, 7) + '-01'; // YYYY-MM-01 in IST
 
   let leadDateWhere = '';
   const params = [];

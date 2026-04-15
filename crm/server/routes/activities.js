@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { istNow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -32,7 +33,7 @@ router.post('/', (req, res) => {
     INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, ?, ?)
   `).run(lead_id, req.user.id, activity_type, description);
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
   db.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').run(now, lead_id);
 
   res.status(201).json({ id: result.lastInsertRowid, success: true });

@@ -323,11 +323,10 @@ function seedIfEmpty(db) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const now = new Date();
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
   const daysAgo = (d) => {
-    const dt = new Date(now);
-    dt.setDate(dt.getDate() - d);
-    return dt.toISOString().replace('T', ' ').split('.')[0];
+    return new Date(Date.now() + IST_OFFSET - d * 86400000)
+      .toISOString().replace('T', ' ').split('.')[0];
   };
 
   const leadsData = [
@@ -423,10 +422,10 @@ function seedIfEmpty(db) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
-  const yesterday = new Date(now.getTime() - 86400000).toISOString().split('T')[0];
-  const twoDaysAgo = new Date(now.getTime() - 2 * 86400000).toISOString().split('T')[0];
+  const today     = new Date(Date.now() + IST_OFFSET).toISOString().split('T')[0];
+  const tomorrow  = new Date(Date.now() + IST_OFFSET + 86400000).toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() + IST_OFFSET - 86400000).toISOString().split('T')[0];
+  const twoDaysAgo = new Date(Date.now() + IST_OFFSET - 2 * 86400000).toISOString().split('T')[0];
 
   const followUpsData = [
     [leadIds[0], userIds[2], tomorrow, '10:00', 'Rajesh visiting center — show him the floor', 0, null, daysAgo(1)],

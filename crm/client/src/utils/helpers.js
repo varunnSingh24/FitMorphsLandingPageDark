@@ -1,8 +1,16 @@
-// Format datetime to IST
+// All timestamps from the server are stored as IST (UTC+5:30).
+// Parse a stored IST datetime string into a JS Date (treats it as IST, not UTC).
+function parseIST(dateStr) {
+  if (!dateStr) return new Date(0);
+  // Normalise space to T, then append +05:30 so JS treats it as IST
+  const iso = dateStr.replace(' ', 'T');
+  return new Date(iso.includes('+') ? iso : iso + '+05:30');
+}
+
+// Format datetime to IST display
 export function formatDateTime(dateStr) {
   if (!dateStr) return '—';
-  const d = new Date(dateStr + (dateStr.includes('T') ? '' : ' UTC+0530'));
-  return d.toLocaleString('en-IN', {
+  return parseIST(dateStr).toLocaleString('en-IN', {
     timeZone: 'Asia/Kolkata',
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,
@@ -11,8 +19,10 @@ export function formatDateTime(dateStr) {
 
 export function formatDate(dateStr) {
   if (!dateStr) return '—';
-  const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  // Date-only strings (YYYY-MM-DD): treat as IST midnight
+  const iso = dateStr.length === 10 ? dateStr + 'T00:00:00+05:30' : dateStr.replace(' ', 'T');
+  const d = new Date(iso.includes('+') ? iso : iso + '+05:30');
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 }
 
 export function formatDuration(seconds) {
@@ -24,8 +34,8 @@ export function formatDuration(seconds) {
 
 export function timeAgo(dateStr) {
   if (!dateStr) return '';
-  const now = new Date();
-  const past = new Date(dateStr);
+  const now = Date.now();
+  const past = parseIST(dateStr).getTime();
   const diff = Math.floor((now - past) / 1000);
   if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;

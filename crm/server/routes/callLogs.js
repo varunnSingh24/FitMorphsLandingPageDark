@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { istNow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -18,7 +19,7 @@ router.post('/', (req, res) => {
   const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(lead_id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
 
   // Create call log
   const result = db.prepare(`

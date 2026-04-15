@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { istNow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -24,7 +25,7 @@ router.put('/:key', requireRole('admin'), (req, res) => {
   if (value === undefined) return res.status(400).json({ error: 'value required' });
 
   const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-  const now = new Date().toISOString().replace('T', ' ').split('.')[0];
+  const now = istNow();
 
   const existing = db.prepare('SELECT key FROM settings WHERE key = ?').get(req.params.key);
   if (existing) {
