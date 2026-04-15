@@ -46,18 +46,18 @@ router.post('/', (req, res) => {
   }
 
   const assignee = assigned_to || req.user.id;
+  const now = istNow();
   const result = db.prepare(`
-    INSERT INTO follow_ups (lead_id, assigned_to, follow_up_date, follow_up_time, note)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(lead_id, assignee, follow_up_date, follow_up_time || null, note || null);
+    INSERT INTO follow_ups (lead_id, assigned_to, follow_up_date, follow_up_time, note, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(lead_id, assignee, follow_up_date, follow_up_time || null, note || null, now);
 
   // Update lead status to follow_up
   const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(lead_id);
   if (lead && !['converted', 'lost', 'junk'].includes(lead.status)) {
-    const now = istNow();
     db.prepare("UPDATE leads SET status = 'follow_up', updated_at = ? WHERE id = ?").run(now, lead_id);
-    db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
-      .run(lead_id, req.user.id, `Follow-up scheduled for ${follow_up_date}${follow_up_time ? ' ' + follow_up_time : ''}`);
+    db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'note', ?, ?)`)
+      .run(lead_id, req.user.id, `Follow-up scheduled for ${follow_up_date}${follow_up_time ? ' ' + follow_up_time : ''}`, now);
   }
 
   res.status(201).json({ id: result.lastInsertRowid, success: true });
@@ -72,8 +72,8 @@ router.put('/:id/complete', (req, res) => {
   const now = istNow();
   db.prepare('UPDATE follow_ups SET is_completed = 1, completed_at = ? WHERE id = ?').run(now, followUp.id);
 
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
-    .run(followUp.lead_id, req.user.id, `Follow-up marked as completed`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'note', ?, ?)`)
+    .run(followUp.lead_id, req.user.id, `Follow-up marked as completed`, now);
 
   res.json({ success: true });
 });

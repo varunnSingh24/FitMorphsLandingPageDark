@@ -25,7 +25,7 @@ function initializeDatabase() {
       role TEXT NOT NULL CHECK(role IN ('admin','manager','sales_agent','dietician')),
       phone TEXT,
       is_active INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS leads (
@@ -45,8 +45,8 @@ function initializeDatabase() {
       notes TEXT,
       city TEXT,
       locality TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+      updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS call_logs (
@@ -58,7 +58,7 @@ function initializeDatabase() {
       call_outcome TEXT CHECK(call_outcome IN ('no_answer','busy','callback_requested','interested','not_interested','converted','wrong_number','voicemail')),
       summary TEXT,
       follow_up_date TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS activities (
@@ -67,7 +67,7 @@ function initializeDatabase() {
       user_id INTEGER NOT NULL REFERENCES users(id),
       activity_type TEXT CHECK(activity_type IN ('call','email','whatsapp','meeting','note','status_change','assignment_change')),
       description TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS follow_ups (
@@ -79,7 +79,7 @@ function initializeDatabase() {
       note TEXT,
       is_completed INTEGER DEFAULT 0,
       completed_at TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS medical_histories (
@@ -102,14 +102,14 @@ function initializeDatabase() {
       emergency_contact_phone TEXT,
       emergency_contact_relation TEXT,
       additional_notes TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+      updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
-      updated_at TEXT DEFAULT (datetime('now'))
+      updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS clients (
@@ -123,8 +123,8 @@ function initializeDatabase() {
       target_weight_kg REAL,
       status TEXT DEFAULT 'active' CHECK(status IN ('active','paused','completed','dropped')),
       notes TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+      updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS checkins (
@@ -137,7 +137,7 @@ function initializeDatabase() {
       energy_level TEXT CHECK(energy_level IN ('high','moderate','low','very_low')),
       notes TEXT,
       next_checkin_date TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
 
     CREATE TABLE IF NOT EXISTS reminders (
@@ -151,7 +151,7 @@ function initializeDatabase() {
       due_at TEXT NOT NULL,
       snoozed_until TEXT,
       is_done INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
   `);
 
@@ -204,8 +204,8 @@ function initializeDatabase() {
         notes TEXT,
         city TEXT,
         locality TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
-        updated_at TEXT DEFAULT (datetime('now'))
+        created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+        updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
       );
       INSERT INTO leads_new SELECT * FROM leads;
       DROP TABLE leads;
@@ -227,7 +227,7 @@ function initializeDatabase() {
         role TEXT NOT NULL CHECK(role IN ('admin','manager','sales_agent','dietician')),
         phone TEXT,
         is_active INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT (datetime('now'))
+        created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
       );
       INSERT INTO users_new SELECT * FROM users;
       DROP TABLE users;
@@ -253,8 +253,8 @@ function initializeDatabase() {
         target_weight_kg REAL,
         status TEXT DEFAULT 'active' CHECK(status IN ('active','paused','completed','dropped')),
         notes TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
-        updated_at TEXT DEFAULT (datetime('now'))
+        created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+        updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
       );
       INSERT INTO clients_new SELECT * FROM clients;
       DROP TABLE clients;
@@ -278,7 +278,7 @@ function initializeDatabase() {
         energy_level TEXT CHECK(energy_level IN ('high','moderate','low','very_low')),
         notes TEXT,
         next_checkin_date TEXT,
-        created_at TEXT DEFAULT (datetime('now'))
+        created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
       );
       INSERT INTO checkins_new SELECT * FROM checkins;
       DROP TABLE checkins;

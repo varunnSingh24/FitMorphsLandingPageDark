@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { istNow } = require('../utils/time');
 
 const router = express.Router();
 router.use(authenticate);
@@ -106,9 +107,10 @@ router.post('/', requireRole('admin'), (req, res) => {
   if (existing) return res.status(409).json({ error: 'Email already exists' });
 
   const hash = bcrypt.hashSync(password, 10);
+  const now = istNow();
   const result = db.prepare(
-    'INSERT INTO users (name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?)'
-  ).run(name, email.toLowerCase().trim(), hash, role, phone || null);
+    'INSERT INTO users (name, email, password_hash, role, phone, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(name, email.toLowerCase().trim(), hash, role, phone || null, now);
 
   const user = db.prepare('SELECT id, name, email, role, phone, is_active, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json({ user });

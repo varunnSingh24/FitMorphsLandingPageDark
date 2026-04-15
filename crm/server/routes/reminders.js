@@ -76,9 +76,9 @@ router.post('/', (req, res) => {
   if (!title || !due_at) return res.status(400).json({ error: 'title and due_at required' });
 
   const result = db.prepare(`
-    INSERT INTO reminders (user_id, reminder_type, ref_type, ref_id, title, message, due_at)
-    VALUES (?, 'custom', ?, ?, ?, ?, ?)
-  `).run(req.user.id, ref_type || null, ref_id || null, title, message || null, due_at);
+    INSERT INTO reminders (user_id, reminder_type, ref_type, ref_id, title, message, due_at, created_at)
+    VALUES (?, 'custom', ?, ?, ?, ?, ?, ?)
+  `).run(req.user.id, ref_type || null, ref_id || null, title, message || null, due_at, istNow());
 
   res.status(201).json({ id: result.lastInsertRowid, success: true });
 });

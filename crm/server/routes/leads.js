@@ -73,8 +73,8 @@ router.post('/', (req, res) => {
   const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
 
   // Log activity
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
-    .run(lead.id, req.user.id, `Lead created by ${req.user.name}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'note', ?, ?)`)
+    .run(lead.id, req.user.id, `Lead created by ${req.user.name}`, now);
 
   res.status(201).json({ lead });
 });
@@ -124,8 +124,8 @@ router.put('/:id', (req, res) => {
     priority || lead.priority, interested_in ?? lead.interested_in,
     notes ?? lead.notes, city ?? lead.city, locality ?? lead.locality, now, lead.id);
 
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
-    .run(lead.id, userId, `Lead info updated by ${req.user.name}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'note', ?, ?)`)
+    .run(lead.id, userId, `Lead info updated by ${req.user.name}`, now);
 
   res.json({ lead: db.prepare('SELECT * FROM leads WHERE id = ?').get(lead.id) });
 });
@@ -147,8 +147,8 @@ router.put('/:id/status', (req, res) => {
   const now = istNow();
   db.prepare('UPDATE leads SET status = ?, updated_at = ? WHERE id = ?').run(status, now, lead.id);
 
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'status_change', ?)`)
-    .run(lead.id, userId, `Status changed: ${lead.status} → ${status}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'status_change', ?, ?)`)
+    .run(lead.id, userId, `Status changed: ${lead.status} → ${status}`, now);
 
   res.json({ success: true, status });
 });
@@ -168,8 +168,8 @@ router.put('/:id/assign', requireRole('admin', 'manager'), (req, res) => {
   const now = istNow();
   db.prepare('UPDATE leads SET assigned_to = ?, updated_at = ? WHERE id = ?').run(assigned_to, now, lead.id);
 
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'assignment_change', ?)`)
-    .run(lead.id, req.user.id, `Lead assigned to ${agent.name}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'assignment_change', ?, ?)`)
+    .run(lead.id, req.user.id, `Lead assigned to ${agent.name}`, now);
 
   res.json({ success: true });
 });
@@ -238,8 +238,8 @@ router.put('/:id/medical', (req, res) => {
       additional_notes||null, now, now);
   }
 
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
-    .run(lead.id, userId, `Medical history updated by ${req.user.name}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'note', ?, ?)`)
+    .run(lead.id, userId, `Medical history updated by ${req.user.name}`, now);
 
   const medical = db.prepare('SELECT * FROM medical_histories WHERE lead_id = ?').get(lead.id);
   res.json({ medical });
@@ -259,12 +259,12 @@ router.post('/bulk-assign', requireRole('admin', 'manager'), (req, res) => {
 
   const now = istNow();
   const stmt = db.prepare('UPDATE leads SET assigned_to = ?, updated_at = ? WHERE id = ?');
-  const actStmt = db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'assignment_change', ?)`);
+  const actStmt = db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'assignment_change', ?, ?)`);
 
   db.transaction(() => {
     lead_ids.forEach(id => {
       stmt.run(assigned_to, now, id);
-      actStmt.run(id, req.user.id, `Lead bulk-assigned to ${agent.name}`);
+      actStmt.run(id, req.user.id, `Lead bulk-assigned to ${agent.name}`, now);
     });
   })();
 

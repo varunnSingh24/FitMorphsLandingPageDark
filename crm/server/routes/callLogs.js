@@ -23,14 +23,14 @@ router.post('/', (req, res) => {
 
   // Create call log
   const result = db.prepare(`
-    INSERT INTO call_logs (lead_id, called_by, call_type, call_duration_seconds, call_outcome, summary, follow_up_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(lead_id, req.user.id, call_type, call_duration_seconds, call_outcome, summary || null, follow_up_date || null);
+    INSERT INTO call_logs (lead_id, called_by, call_type, call_duration_seconds, call_outcome, summary, follow_up_date, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(lead_id, req.user.id, call_type, call_duration_seconds, call_outcome, summary || null, follow_up_date || null, now);
 
   // Create activity
   const durationStr = formatDuration(call_duration_seconds);
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'call', ?)`)
-    .run(lead_id, req.user.id, `${call_type === 'inbound' ? 'Inbound' : 'Outbound'} call (${durationStr}) — ${call_outcome}. ${summary || ''}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'call', ?, ?)`)
+    .run(lead_id, req.user.id, `${call_type === 'inbound' ? 'Inbound' : 'Outbound'} call (${durationStr}) — ${call_outcome}. ${summary || ''}`, now);
 
   // Auto-update lead status
   let newStatus = lead.status;
@@ -43,8 +43,8 @@ router.post('/', (req, res) => {
 
   if (newStatus !== lead.status) {
     db.prepare('UPDATE leads SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, now, lead_id);
-    db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'status_change', ?)`)
-      .run(lead_id, req.user.id, `Status auto-updated: ${lead.status} → ${newStatus}`);
+    db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'status_change', ?, ?)`)
+      .run(lead_id, req.user.id, `Status auto-updated: ${lead.status} → ${newStatus}`, now);
   } else {
     db.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').run(now, lead_id);
   }
@@ -52,9 +52,9 @@ router.post('/', (req, res) => {
   // Create follow-up if follow_up_date provided
   if (follow_up_date) {
     db.prepare(`
-      INSERT INTO follow_ups (lead_id, assigned_to, follow_up_date, note)
-      VALUES (?, ?, ?, ?)
-    `).run(lead_id, req.user.id, follow_up_date, `Follow-up from call: ${summary || call_outcome}`);
+      INSERT INTO follow_ups (lead_id, assigned_to, follow_up_date, note, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(lead_id, req.user.id, follow_up_date, `Follow-up from call: ${summary || call_outcome}`, now);
   }
 
   res.status(201).json({ id: result.lastInsertRowid, success: true });

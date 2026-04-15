@@ -111,8 +111,8 @@ router.post('/', requireRole('admin', 'manager'), (req, res) => {
 
   // Update lead status to converted
   db.prepare("UPDATE leads SET status = 'converted', updated_at = ? WHERE id = ?").run(now, lead_id);
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'status_change', ?)`)
-    .run(lead_id, req.user.id, 'Lead converted to active client');
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'status_change', ?, ?)`)
+    .run(lead_id, req.user.id, 'Lead converted to active client', now);
 
   const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json({ client });
@@ -171,10 +171,10 @@ router.post('/:id/checkins', (req, res) => {
   const now = istNow();
 
   const result = db.prepare(`
-    INSERT INTO checkins (client_id, dietitian_id, checkin_type, weight_kg, compliance, energy_level, notes, next_checkin_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO checkins (client_id, dietitian_id, checkin_type, weight_kg, compliance, energy_level, notes, next_checkin_date, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(client.id, userId, checkin_type, weight_kg || null, compliance || null,
-    energy_level || null, notes || null, next_checkin_date || null);
+    energy_level || null, notes || null, next_checkin_date || null, now);
 
   // Update client weight if provided
   if (weight_kg) {
@@ -188,17 +188,17 @@ router.post('/:id/checkins', (req, res) => {
   // Create reminder for next checkin if date provided
   if (next_checkin_date) {
     db.prepare(`
-      INSERT INTO reminders (user_id, reminder_type, ref_type, ref_id, title, message, due_at)
-      VALUES (?, 'checkin', 'client', ?, ?, ?, ?)
+      INSERT INTO reminders (user_id, reminder_type, ref_type, ref_id, title, message, due_at, created_at)
+      VALUES (?, 'checkin', 'client', ?, ?, ?, ?, ?)
     `).run(userId, client.id,
       `Check-in: ${checkin_type.replace(/_/g, ' ')}`,
       `Scheduled check-in with client`,
-      next_checkin_date + ' 10:00:00');
+      next_checkin_date + ' 10:00:00', now);
   }
 
   // Log activity on the lead
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description) VALUES (?, ?, 'note', ?)`)
-    .run(client.lead_id, userId, `${checkin_type.replace(/_/g, ' ')} logged${weight_kg ? ` — ${weight_kg}kg` : ''}${compliance ? ` — ${compliance}` : ''}`);
+  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'note', ?, ?)`)
+    .run(client.lead_id, userId, `${checkin_type.replace(/_/g, ' ')} logged${weight_kg ? ` — ${weight_kg}kg` : ''}${compliance ? ` — ${compliance}` : ''}`, now);
 
   res.status(201).json({ id: result.lastInsertRowid, success: true });
 });
