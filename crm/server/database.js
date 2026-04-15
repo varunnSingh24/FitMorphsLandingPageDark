@@ -13,6 +13,9 @@ function getDb() {
 function initializeDatabase() {
   const db = getDb();
 
+  // Temporarily disable foreign key checks for schema changes
+  db.pragma('foreign_keys = OFF');
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -284,7 +287,7 @@ function initializeDatabase() {
     console.log('Migrated checkins table: added excellent/very_low options');
   }
 
-  // Re-enable foreign keys after migrations
+  // Re-enable foreign key checks after migrations
   db.pragma('foreign_keys = ON');
 
   seedIfEmpty(db);

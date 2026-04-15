@@ -3,15 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
-const DEFAULT_SOURCES = [
-  { key: 'walk_in', label: 'Walk-in' }, { key: 'instagram', label: 'Instagram' },
-  { key: 'facebook', label: 'Facebook' }, { key: 'google_ads', label: 'Google Ads' },
-  { key: 'referral', label: 'Referral' }, { key: 'website', label: 'Website' },
-  { key: 'phone_inquiry', label: 'Phone Inquiry' }, { key: 'other', label: 'Other' },
-];
 const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost'];
 const INTERESTS = ['weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other'];
 const INTEREST_LABELS = { weight_loss:'Weight Loss', muscle_gain:'Muscle Gain', yoga:'Yoga', crossfit:'CrossFit', personal_training:'Personal Training', group_classes:'Group Classes', diet_plan:'Diet Plan', other:'Other' };
+
+const DEFAULT_SOURCES = [
+  { key: 'walk_in',       label: 'Walk-in' },
+  { key: 'instagram',     label: 'Instagram' },
+  { key: 'facebook',      label: 'Facebook' },
+  { key: 'google_ads',    label: 'Google Ads' },
+  { key: 'referral',      label: 'Referral' },
+  { key: 'website',       label: 'Website' },
+  { key: 'phone_inquiry', label: 'Phone Inquiry' },
+  { key: 'other',         label: 'Other' },
+];
 
 const HEALTH_CONDITIONS = [
   { key: 'type2_diabetes',    label: 'Type 2 Diabetes' },
@@ -76,10 +81,9 @@ export default function AddLead() {
     }));
 
   useEffect(() => {
-    // Fetch dynamic sources from settings
-    api.get('/settings/lead_sources').then(r => {
-      if (r.data.value && Array.isArray(r.data.value)) setSources(r.data.value);
-    }).catch(() => {});
+    api.get('/settings/lead_sources')
+      .then(r => { if (r.data.value?.length) setSources(r.data.value); })
+      .catch(() => {}); // silently fall back to DEFAULT_SOURCES
 
     if (['admin','manager'].includes(user?.role)) {
       api.get('/users').then(r => {
