@@ -78,4 +78,17 @@ router.put('/:id/complete', (req, res) => {
   res.json({ success: true });
 });
 
+// GET /api/follow-ups/lead/:leadId/pending — pending follow-ups for a lead
+router.get('/lead/:leadId/pending', (req, res) => {
+  const db = getDb();
+  const followUps = db.prepare(`
+    SELECT f.id, f.follow_up_date, f.follow_up_time, f.note
+    FROM follow_ups f
+    WHERE f.lead_id = ? AND f.is_completed = 0
+    ORDER BY f.follow_up_date ASC
+  `).all(req.params.leadId);
+
+  res.json({ followUps });
+});
+
 module.exports = router;

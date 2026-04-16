@@ -287,6 +287,23 @@ function initializeDatabase() {
     console.log('Migrated checkins table: added excellent/very_low options');
   }
 
+  // Migration: add call_number, is_follow_up, follow_up_id to call_logs
+  const callLogsSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='call_logs'").get();
+  if (callLogsSchema && !callLogsSchema.sql.includes('call_number')) {
+    db.exec(`ALTER TABLE call_logs ADD COLUMN call_number INTEGER`);
+    db.exec(`ALTER TABLE call_logs ADD COLUMN is_follow_up INTEGER DEFAULT 0`);
+    db.exec(`ALTER TABLE call_logs ADD COLUMN follow_up_id INTEGER REFERENCES follow_ups(id)`);
+
+    // Backfill call_number based on chronological order per lead
+    const leadIds = db.prepare('SELECT DISTINCT lead_id FROM call_logs').all();
+    const updateStmt = db.prepare('UPDATE call_logs SET call_number = ? WHERE id = ?');
+    for (const { lead_id } of leadIds) {
+      const calls = db.prepare('SELECT id FROM call_logs WHERE lead_id = ? ORDER BY created_at ASC').all(lead_id);
+      calls.forEach((call, idx) => updateStmt.run(idx + 1, call.id));
+    }
+    console.log('Migrated call_logs: added call_number, is_follow_up, follow_up_id');
+  }
+
   // Re-enable foreign key checks after migrations
   db.pragma('foreign_keys = ON');
 

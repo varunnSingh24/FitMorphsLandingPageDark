@@ -450,9 +450,7 @@ export default function LeadDetail() {
             {tab === 'calls' && (
               callLogs.length === 0
                 ? <EmptyState icon="📞" text="No calls logged yet. Use the 'Log Call' button to record your first call."/>
-                : <div className="space-y-3">
-                    {callLogs.map(c => <CallLogItem key={c.id} log={c}/>)}
-                  </div>
+                : <CallsTabContent callLogs={callLogs} />
             )}
 
             {tab === 'medical' && (
@@ -904,37 +902,171 @@ function TimelineItem({ activity }) {
   );
 }
 
-function CallLogItem({ log }) {
+function CallsTabContent({ callLogs }) {
+  // Summary stats
+  const totalCalls = callLogs.length;
+  const now = new Date();
+  const thisMonthCalls = callLogs.filter(c => {
+    const d = new Date(c.created_at?.replace(' ', 'T') + '+05:30');
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  const avgDuration = totalCalls > 0
+    ? Math.round(callLogs.reduce((sum, c) => sum + (c.call_duration_seconds || 0), 0) / totalCalls)
+    : 0;
+  const firstCallDate = callLogs.length > 0 ? callLogs[callLogs.length - 1].created_at : null;
+  const followUpCalls = callLogs.filter(c => c.is_follow_up).length;
+  const newCalls = totalCalls - followUpCalls;
+
+  // Group by month
+  const grouped = {};
+  callLogs.forEach(c => {
+    const d = new Date(c.created_at?.replace(' ', 'T') + '+05:30');
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+    if (!grouped[key]) grouped[key] = { label, calls: [] };
+    grouped[key].calls.push(c);
+  });
+  const sortedMonths = Object.keys(grouped).sort().reverse();
+
   return (
-    <div className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 hover:shadow-sm transition-all">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-sm font-semibold ${log.call_type === 'inbound' ? 'text-green-700' : 'text-sky-700'}`}>
-            {log.call_type === 'inbound' ? '↙ Inbound' : '↗ Outbound'} Call
-          </span>
-          <span className={`badge text-xs ${OUTCOME_COLORS[log.call_outcome] || 'bg-gray-100 text-gray-600'}`}>
-            {log.call_outcome?.replace(/_/g, ' ')}
-          </span>
+    <div className="space-y-5">
+      {/* Summary Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-sky-50 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-sky-700">{totalCalls}</div>
+          <div className="text-xs text-sky-500 mt-0.5">Total Calls</div>
         </div>
-        <span className="text-xs text-gray-400 font-mono flex-shrink-0 bg-gray-50 px-2 py-1 rounded-lg">
-          ⏱ {formatDuration(log.call_duration_seconds)}
-        </span>
+        <div className="bg-violet-50 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-violet-700">{thisMonthCalls}</div>
+          <div className="text-xs text-violet-500 mt-0.5">This Month</div>
+        </div>
+        <div className="bg-amber-50 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-amber-700">{formatDuration(avgDuration)}</div>
+          <div className="text-xs text-amber-500 mt-0.5">Avg Duration</div>
+        </div>
+        <div className="bg-green-50 rounded-xl p-3 text-center">
+          <div className="text-xl font-bold text-green-700">{firstCallDate ? formatDate(firstCallDate) : '—'}</div>
+          <div className="text-xs text-green-500 mt-0.5">First Call</div>
+        </div>
       </div>
 
-      {log.summary && (
-        <p className="text-sm text-gray-600 mt-2.5 leading-relaxed bg-gray-50 rounded-lg px-3 py-2">{log.summary}</p>
-      )}
-
-      {log.follow_up_date && (
-        <div className="text-xs text-sky-600 mt-2 flex items-center gap-1">
-          📅 Follow-up scheduled: <span className="font-medium">{formatDate(log.follow_up_date)}</span>
+      {/* New vs Follow-up summary */}
+      <div className="flex items-center gap-4 text-sm px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+          <span className="text-gray-600"><span className="font-semibold text-gray-900">{newCalls}</span> New calls</span>
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+          <span className="text-gray-600"><span className="font-semibold text-gray-900">{followUpCalls}</span> Follow-up calls</span>
+        </div>
+      </div>
 
-      <div className="text-xs text-gray-400 mt-2 flex items-center gap-1.5">
-        <span className="font-medium text-gray-500">{log.caller_name}</span>
-        <span>·</span>
-        {formatDateTime(log.created_at)}
+      {/* Monthly Groups */}
+      {sortedMonths.map(monthKey => {
+        const group = grouped[monthKey];
+        return (
+          <div key={monthKey}>
+            {/* Month Header */}
+            <div className="flex items-center gap-3 mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">{group.label}</h3>
+              <div className="flex-1 h-px bg-gray-200"></div>
+              <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                {group.calls.length} call{group.calls.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Timeline */}
+            <div className="relative ml-3">
+              {/* Connector line */}
+              <div className="absolute left-[7px] top-4 bottom-4 w-0.5 bg-gray-100"></div>
+
+              <div className="space-y-3">
+                {group.calls.map(c => (
+                  <CallLogItemRedesigned key={c.id} log={c} />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CallLogItemRedesigned({ log }) {
+  const isFollowUp = !!log.is_follow_up;
+  const dotColor = isFollowUp ? 'bg-blue-500' : 'bg-emerald-500';
+  const borderColor = isFollowUp ? 'border-blue-200' : 'border-gray-100';
+  const typeLabel = isFollowUp ? 'Follow-Up' : 'New Call';
+  const typeBadgeBg = isFollowUp ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700';
+
+  return (
+    <div className="flex gap-3 relative">
+      {/* Timeline dot */}
+      <div className={`w-4 h-4 rounded-full ${dotColor} flex-shrink-0 z-10 border-2 border-white mt-4 shadow-sm`} />
+
+      <div className={`flex-1 border ${borderColor} rounded-xl p-4 hover:shadow-sm transition-all bg-white`}>
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Call number */}
+            {log.call_number && (
+              <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">
+                #{log.call_number}
+              </span>
+            )}
+            {/* New / Follow-up badge */}
+            <span className={`badge text-xs font-medium ${typeBadgeBg}`}>
+              {typeLabel}
+            </span>
+            {/* Direction */}
+            <span className={`text-sm font-semibold ${log.call_type === 'inbound' ? 'text-green-700' : 'text-sky-700'}`}>
+              {log.call_type === 'inbound' ? '↙ Inbound' : '↗ Outbound'}
+            </span>
+            {/* Outcome */}
+            <span className={`badge text-xs ${OUTCOME_COLORS[log.call_outcome] || 'bg-gray-100 text-gray-600'}`}>
+              {log.call_outcome?.replace(/_/g, ' ')}
+            </span>
+          </div>
+          <span className="text-xs text-gray-400 font-mono flex-shrink-0 bg-gray-50 px-2 py-1 rounded-lg">
+            ⏱ {formatDuration(log.call_duration_seconds)}
+          </span>
+        </div>
+
+        {/* Summary */}
+        {log.summary && (
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed bg-gray-50 rounded-lg px-3 py-2">
+            {log.summary}
+          </p>
+        )}
+
+        {/* Linked follow-up info */}
+        {log.linked_follow_up_date && (
+          <div className="mt-2 text-xs bg-blue-50 text-blue-700 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+            🔗 Linked follow-up: {formatDate(log.linked_follow_up_date)}
+            {log.linked_follow_up_note && <span className="text-blue-500 ml-1">— {log.linked_follow_up_note}</span>}
+            {log.linked_follow_up_completed ? (
+              <span className="ml-auto text-green-600 font-medium">✓ Completed</span>
+            ) : (
+              <span className="ml-auto text-orange-600 font-medium">Pending</span>
+            )}
+          </div>
+        )}
+
+        {/* New follow-up scheduled from this call */}
+        {log.follow_up_date && (
+          <div className="text-xs text-sky-600 mt-2 flex items-center gap-1">
+            📅 Follow-up scheduled: <span className="font-medium">{formatDate(log.follow_up_date)}</span>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="text-xs text-gray-400 mt-2.5 flex items-center gap-1.5">
+          <span className="font-medium text-gray-500">{log.caller_name}</span>
+          <span>·</span>
+          {formatDateTime(log.created_at)}
+        </div>
       </div>
     </div>
   );

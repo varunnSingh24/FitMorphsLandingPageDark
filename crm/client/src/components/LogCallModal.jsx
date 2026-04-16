@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 
 const OUTCOMES = [
@@ -21,10 +21,20 @@ export default function LogCallModal({ lead, onClose, onSuccess }) {
     summary: '',
     follow_up_date: '',
   });
+  const [isFollowUp, setIsFollowUp] = useState(false);
+  const [followUpId, setFollowUpId] = useState('');
+  const [pendingFollowUps, setPendingFollowUps] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Fetch pending follow-ups for this lead
+  useEffect(() => {
+    api.get(`/follow-ups/lead/${lead.id}/pending`)
+      .then(r => setPendingFollowUps(r.data.followUps))
+      .catch(() => {});
+  }, [lead.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,6 +51,8 @@ export default function LogCallModal({ lead, onClose, onSuccess }) {
         call_outcome: form.call_outcome,
         summary: form.summary,
         follow_up_date: form.follow_up_date || null,
+        is_follow_up: isFollowUp ? 1 : 0,
+        follow_up_id: followUpId ? parseInt(followUpId) : null,
       });
       onSuccess?.();
       onClose();
@@ -71,6 +83,35 @@ export default function LogCallModal({ lead, onClose, onSuccess }) {
               <input className="input" type="number" min="0" max="59" placeholder="ss" value={form.duration_sec} onChange={e => set('duration_sec', e.target.value)} />
             </div>
           </div>
+        </div>
+
+        {/* Follow-up call toggle */}
+        <div className="border border-gray-100 rounded-xl p-3 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="rounded text-sky-600"
+              checked={isFollowUp}
+              onChange={e => { setIsFollowUp(e.target.checked); if (!e.target.checked) setFollowUpId(''); }}
+            />
+            <span className="text-sm text-gray-700 font-medium">Is this a follow-up call?</span>
+          </label>
+          {isFollowUp && pendingFollowUps.length > 0 && (
+            <div>
+              <label className="label">Link to Scheduled Follow-Up</label>
+              <select className="select text-sm" value={followUpId} onChange={e => setFollowUpId(e.target.value)}>
+                <option value="">Select a pending follow-up...</option>
+                {pendingFollowUps.map(fu => (
+                  <option key={fu.id} value={fu.id}>
+                    {fu.follow_up_date}{fu.follow_up_time ? ` ${fu.follow_up_time}` : ''} — {fu.note || 'No note'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {isFollowUp && pendingFollowUps.length === 0 && (
+            <p className="text-xs text-gray-400">No pending follow-ups for this lead.</p>
+          )}
         </div>
 
         <div>
