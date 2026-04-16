@@ -153,6 +153,29 @@ function initializeDatabase() {
       is_done INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
+
+    CREATE TABLE IF NOT EXISTS bsl_readings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      logged_by INTEGER NOT NULL REFERENCES users(id),
+      reading_date TEXT NOT NULL,
+      fasting_bsl REAL,
+      pp_bsl REAL,
+      random_bsl REAL,
+      comment TEXT,
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
+    );
+
+    CREATE TABLE IF NOT EXISTS hba1c_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      logged_by INTEGER NOT NULL REFERENCES users(id),
+      test_date TEXT NOT NULL,
+      hba1c_value REAL NOT NULL,
+      lab_name TEXT,
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
+    );
   `);
 
   // Seed default settings

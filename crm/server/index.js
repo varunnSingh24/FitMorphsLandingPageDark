@@ -32,6 +32,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/clients', require('./routes/clients'));
+app.use('/api/bsl', require('./routes/bsl'));
 app.use('/api/reminders', require('./routes/reminders'));
 
 app.use((err, req, res, next) => {
