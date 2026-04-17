@@ -176,6 +176,20 @@ function initializeDatabase() {
       notes TEXT,
       created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
     );
+
+    CREATE TABLE IF NOT EXISTS measurements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      logged_by INTEGER NOT NULL REFERENCES users(id),
+      measurement_date TEXT NOT NULL,
+      waist_cm REAL,
+      hip_cm REAL,
+      chest_cm REAL,
+      arms_cm REAL,
+      thighs_cm REAL,
+      notes TEXT,
+      created_at TEXT NOT NULL
+    );
   `);
 
   // Seed default settings
