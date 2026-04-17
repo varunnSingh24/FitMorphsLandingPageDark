@@ -8,6 +8,7 @@ const navItems = [
   { to: '/leads', label: 'Leads', icon: UsersIcon },
   { to: '/clients', label: 'Clients', icon: ClientsIcon },
   { to: '/follow-ups', label: 'Follow-Ups', icon: CalendarIcon },
+  { to: '/chat', label: 'Chat', icon: ChatIcon, badge: true },
   { to: '/reports', label: 'Reports', icon: ChartIcon, roles: ['admin', 'manager'] },
   { to: '/settings', label: 'Settings', icon: SettingsIcon, roles: ['admin'] },
 ];
@@ -25,6 +26,9 @@ export default function Layout() {
   const [bellOpen, setBellOpen] = useState(false);
   const [bellLoading, setBellLoading] = useState(false);
   const bellRef = useRef(null);
+
+  // Chat unread count
+  const [chatUnread, setChatUnread] = useState(0);
 
   // Close mobile drawer on route change
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
@@ -55,6 +59,15 @@ export default function Layout() {
     const interval = setInterval(fetchReminders, 60000);
     return () => clearInterval(interval);
   }, [fetchReminders]);
+
+  // Poll chat unread every 30s (only when not on chat page)
+  useEffect(() => {
+    if (location.pathname === '/chat') { setChatUnread(0); return; }
+    const fetch = () => api.get('/chat/unread').then(r => setChatUnread(r.data.unread || 0)).catch(() => {});
+    fetch();
+    const interval = setInterval(fetch, 30000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -89,6 +102,7 @@ export default function Layout() {
       <nav className="flex-1 py-4 space-y-0.5 px-2">
         {navItems.map(item => {
           if (item.roles && !item.roles.includes(user?.role)) return null;
+          const unread = item.badge ? chatUnread : 0;
           return (
             <NavLink
               key={item.to}
@@ -102,8 +116,24 @@ export default function Layout() {
                 }`
               }
             >
-              <item.icon className="w-4 h-4 flex-shrink-0" />
-              {(mobile || sidebarOpen) && <span>{item.label}</span>}
+              <div className="relative flex-shrink-0">
+                <item.icon className="w-4 h-4" />
+                {unread > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </div>
+              {(mobile || sidebarOpen) && (
+                <span className="flex-1 flex items-center justify-between">
+                  {item.label}
+                  {unread > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {unread > 9 ? '9+' : unread}
+                    </span>
+                  )}
+                </span>
+              )}
             </NavLink>
           );
         })}
@@ -355,4 +385,7 @@ function PlusIcon({ className }) {
 }
 function BellIcon({ className }) {
   return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
+}
+function ChatIcon({ className }) {
+  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
 }
