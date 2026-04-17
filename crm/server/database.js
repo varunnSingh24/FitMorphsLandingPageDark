@@ -190,6 +190,30 @@ function initializeDatabase() {
       notes TEXT,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS chat_rooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'group' CHECK(type IN ('general','group')),
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_room_members (
+      room_id INTEGER NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+      last_read_at TEXT,
+      PRIMARY KEY (room_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id INTEGER NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id),
+      message TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
+    );
   `);
 
   // Seed default settings
@@ -505,4 +529,31 @@ function seedIfEmpty(db) {
   console.log('Database seeded successfully!');
 }
 
-module.exports = { getDb, initializeDatabase };
+// Seed General chat room (runs every startup — idempotent)
+function seedGeneralRoom(db) {
+  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+  const now = () => new Date(Date.now() + IST_OFFSET).toISOString().replace('T', ' ').split('.')[0];
+
+  const general = db.prepare("SELECT id FROM chat_rooms WHERE type = 'general'").get();
+  if (!general) {
+    const result = db.prepare(
+      "INSERT INTO chat_rooms (name, type, created_by, created_at) VALUES ('General', 'general', NULL, ?)"
+    ).run(now());
+    const roomId = result.lastInsertRowid;
+    const users = db.prepare('SELECT id FROM users WHERE is_active = 1').all();
+    const addMember = db.prepare(
+      'INSERT OR IGNORE INTO chat_room_members (room_id, user_id, joined_at) VALUES (?, ?, ?)'
+    );
+    users.forEach(u => addMember.run(roomId, u.id, now()));
+    console.log(`[Chat] General room created with ${users.length} members`);
+  } else {
+    // Ensure any new users are in the General room
+    const users = db.prepare('SELECT id FROM users WHERE is_active = 1').all();
+    const addMember = db.prepare(
+      'INSERT OR IGNORE INTO chat_room_members (room_id, user_id, joined_at) VALUES (?, ?, ?)'
+    );
+    users.forEach(u => addMember.run(general.id, u.id, now()));
+  }
+}
+
+module.exports = { getDb, initializeDatabase, seedGeneralRoom };

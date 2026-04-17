@@ -52,16 +52,19 @@ export default function LeadDetail() {
   const [callLogs, setCallLogs]   = useState([]);
   const [medical, setMedical]     = useState(null);
   const [users, setUsers]         = useState([]);
-  const [tab, setTab]             = useState('timeline');
-  const [modal, setModal]         = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [editing, setEditing]     = useState(false);
-  const [editForm, setEditForm]   = useState({});
+  const [sources, setSources]         = useState(DEFAULT_SOURCES_OBJ);
+  const [programTypes, setProgramTypes] = useState(DEFAULT_PROGRAM_TYPES);
+  const [clientId, setClientId]       = useState(null);
+  const [tab, setTab]                 = useState('timeline');
+  const [modal, setModal]             = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [editing, setEditing]         = useState(false);
+  const [editForm, setEditForm]       = useState({});
   const [savingStatus, setSavingStatus] = useState(false);
   const [editMedical, setEditMedical] = useState(false);
   const [showConvert, setShowConvert] = useState(false);
   const [convertForm, setConvertForm] = useState({
-    dietitian_id: '', program_type: 'custom', start_date: new Date().toISOString().split('T')[0],
+    dietitian_id: '', program_type: '', start_date: new Date().toISOString().split('T')[0],
     end_date: '', target_weight_kg: '', notes: '',
   });
   const [converting, setConverting] = useState(false);
@@ -74,11 +77,19 @@ export default function LeadDetail() {
         api.get(`/call-logs/lead/${id}`),
         api.get(`/leads/${id}/medical`),
       ]);
-      setLead(leadRes.data.lead);
-      setEditForm(leadRes.data.lead);
+      const leadData = leadRes.data.lead;
+      setLead(leadData);
+      setEditForm(leadData);
       setActivities(actRes.data.activities);
       setCallLogs(callRes.data.callLogs);
       setMedical(medRes.data.medical);
+
+      // If already converted, look up the client ID so "View Client" can link directly
+      if (leadData.status === 'converted') {
+        api.get(`/clients?lead_id=${id}`)
+          .then(r => { if (r.data.clients?.[0]) setClientId(r.data.clients[0].id); })
+          .catch(() => {});
+      }
     } catch (e) {
       if (e.response?.status === 404) navigate('/leads');
     } finally { setLoading(false); }
@@ -86,6 +97,16 @@ export default function LeadDetail() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
+    // Fetch dynamic lead sources (custom ones added in Settings)
+    api.get('/settings/lead_sources')
+      .then(r => { if (r.data.value?.length) setSources(r.data.value); })
+      .catch(() => {});
+
+    // Fetch dynamic program types for the convert modal
+    api.get('/settings/program_types')
+      .then(r => { if (r.data.value?.length) setProgramTypes(r.data.value); })
+      .catch(() => {});
+
     if (['admin','manager'].includes(user?.role)) {
       api.get('/users').then(r => setUsers(r.data.users));
     }
@@ -192,7 +213,11 @@ export default function LeadDetail() {
                 </button>
               )}
               {lead.status === 'converted' && (
-                <Link to={`/clients`} className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors flex items-center gap-1.5">
+                <Link
+                  to={clientId ? `/clients/${clientId}` : '/clients'}
+                  className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   View Client
                 </Link>
               )}
@@ -259,7 +284,7 @@ export default function LeadDetail() {
             </div>
 
             {editing ? (
-              <EditForm form={editForm} setForm={setEditForm} onSave={handleSaveEdit} onCancel={() => setEditing(false)}/>
+              <EditForm form={editForm} setForm={setEditForm} onSave={handleSaveEdit} onCancel={() => setEditing(false)} sources={sources}/>
             ) : (
               <dl className="space-y-2.5">
                 <InfoRow icon="📞" label="Phone" value={<a href={`tel:${lead.phone}`} className="text-sky-600 font-mono hover:underline">{lead.phone}</a>}/>
@@ -271,7 +296,7 @@ export default function LeadDetail() {
                   {lead.city && <InfoRow icon="📍" label="Location" value={`${lead.locality ? lead.locality + ', ' : ''}${lead.city}`}/>}
                 </div>
                 <div className="border-t border-gray-100 pt-2.5 space-y-2.5">
-                  <InfoRow icon="🔗" label="Source" value={SOURCE_LABELS[lead.source] || lead.source || '—'}/>
+                  <InfoRow icon="🔗" label="Source" value={sources.find(s => s.key === lead.source)?.label || SOURCE_LABELS[lead.source] || lead.source || '—'}/>
                   {lead.source_detail && <InfoRow icon="" label="Detail" value={lead.source_detail}/>}
                 </div>
                 {lead.notes && (
@@ -482,15 +507,27 @@ export default function LeadDetail() {
               <div>
                 <label className="label">Assign Dietitian</label>
                 <select className="select" value={convertForm.dietitian_id} onChange={e => setConvertForm(f => ({ ...f, dietitian_id: e.target.value }))}>
-                  <option value="">Select dietitian</option>
-                  {users.filter(u => ['dietician','sales_agent'].includes(u.role)).map(u => (
+                  <option value="">Select dietitian (optional)</option>
+                  {users.filter(u => u.role === 'dietician').map(u => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="label">Program Type</label>
-                <input className="input" value={convertForm.program_type} onChange={e => setConvertForm(f => ({ ...f, program_type: e.target.value }))} placeholder="e.g. weight_loss, diabetes_reversal" />
+                <select
+                  className="select"
+                  value={convertForm.program_type}
+                  onChange={e => setConvertForm(f => ({ ...f, program_type: e.target.value }))}
+                >
+                  <option value="">Select program type</option>
+                  {programTypes.map(p => (
+                    <option key={p.key} value={p.key}>{p.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Add more program types in <Link to="/settings" className="text-sky-600 hover:underline">Settings → Program Types</Link>
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1081,10 +1118,30 @@ function EmptyState({ icon, text }) {
   );
 }
 
-const SOURCES_OPTS = ['walk_in','instagram','facebook','google_ads','referral','website','phone_inquiry','other'];
+const DEFAULT_SOURCES_OBJ = [
+  { key: 'walk_in',       label: 'Walk-in' },
+  { key: 'instagram',     label: 'Instagram' },
+  { key: 'facebook',      label: 'Facebook' },
+  { key: 'google_ads',    label: 'Google Ads' },
+  { key: 'referral',      label: 'Referral' },
+  { key: 'website',       label: 'Website' },
+  { key: 'phone_inquiry', label: 'Phone Inquiry' },
+  { key: 'other',         label: 'Other' },
+];
+
+const DEFAULT_PROGRAM_TYPES = [
+  { key: 'weight_loss',        label: 'Weight Loss' },
+  { key: 'diabetes_reversal',  label: 'Diabetes Reversal' },
+  { key: 'muscle_gain',        label: 'Muscle Gain' },
+  { key: 'diet_plan',          label: 'Diet Plan' },
+  { key: 'general_fitness',    label: 'General Fitness' },
+  { key: 'custom',             label: 'Custom' },
+];
 const INTERESTS    = ['weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other'];
 
-function EditForm({ form, setForm, onSave, onCancel }) {
+function EditForm({ form, setForm, onSave, onCancel, sources }) {
+  // Use dynamic sources from settings; fall back to built-in defaults
+  const srcOpts = sources?.length ? sources : DEFAULT_SOURCES_OBJ;
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
     <div className="space-y-3">
@@ -1099,10 +1156,18 @@ function EditForm({ form, setForm, onSave, onCancel }) {
         <div><label className="label">Locality</label><input className="input" value={form.locality || ''} onChange={e => set('locality', e.target.value)}/></div>
       </div>
       <div>
+        <label className="label">Priority</label>
+        <select className="select" value={form.priority || 'warm'} onChange={e => set('priority', e.target.value)}>
+          <option value="hot">🔥 Hot — Act now</option>
+          <option value="warm">🌤 Warm — Follow up</option>
+          <option value="cold">❄️ Cold — Low urgency</option>
+        </select>
+      </div>
+      <div>
         <label className="label">Source</label>
         <select className="select" value={form.source || ''} onChange={e => set('source', e.target.value)}>
           <option value="">Select</option>
-          {SOURCES_OPTS.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
+          {srcOpts.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
       </div>
       <div>
