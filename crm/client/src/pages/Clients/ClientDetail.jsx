@@ -46,6 +46,7 @@ export default function ClientDetail() {
   const [dietitians, setDietitians] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [bslData, setBslData] = useState({ readings: [], hba1c: [] });
+  const [measurementsData, setMeasurementsData] = useState({ measurements: [] });
 
   const load = useCallback(async () => {
     try {
@@ -77,8 +78,16 @@ export default function ClientDetail() {
     } catch {}
   }, [id]);
 
+  const loadMeasurements = useCallback(async () => {
+    try {
+      const r = await api.get(`/measurements/client/${id}`);
+      setMeasurementsData(r.data);
+    } catch {}
+  }, [id]);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadBSL(); }, [loadBSL]);
+  useEffect(() => { loadMeasurements(); }, [loadMeasurements]);
   useEffect(() => {
     if (['admin', 'manager'].includes(user?.role)) {
       api.get('/users').then(r => {
@@ -484,6 +493,7 @@ export default function ClientDetail() {
                 ['overview', '📊 Overview'],
                 ['checkins', `📋 Check-ins (${checkins.length})`],
                 ['bsl', `🩸 BSL${bslData.readings.length > 0 ? ` (${bslData.readings.length})` : ''}`],
+                ['measurements', `📏 Measurements${measurementsData.measurements.length > 0 ? ` (${measurementsData.measurements.length})` : ''}`],
                 ['progress', '📈 Weight Progress'],
               ].map(([key, label]) => (
                 <button
@@ -651,6 +661,16 @@ export default function ClientDetail() {
               {/* BSL Monitor Tab */}
               {tab === 'bsl' && (
                 <BSLTab clientId={id} bslData={bslData} onRefresh={loadBSL} />
+              )}
+
+              {/* Measurements Tab */}
+              {tab === 'measurements' && (
+                <MeasurementsTab
+                  clientId={id}
+                  data={measurementsData}
+                  onRefresh={loadMeasurements}
+                  clientGender={client.gender}
+                />
               )}
 
               {/* Weight Progress Tab */}
@@ -1196,6 +1216,299 @@ function BSLTab({ clientId, bslData, onRefresh }) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Measurement Helpers ──────────────────────────────────────────────────────
+
+function classifyWaist(value, gender) {
+  if (value == null) return null;
+  if (gender === 'male') {
+    if (value < 94)  return 'normal';
+    if (value < 102) return 'risk';
+    return 'high';
+  }
+  // female / unknown
+  if (value < 80) return 'normal';
+  if (value < 88) return 'risk';
+  return 'high';
+}
+
+function classifyWHR(whr, gender) {
+  if (whr == null) return null;
+  if (gender === 'male') {
+    if (whr < 0.90) return 'normal';
+    if (whr < 0.95) return 'risk';
+    return 'high';
+  }
+  // female / unknown
+  if (whr < 0.80) return 'normal';
+  if (whr < 0.85) return 'risk';
+  return 'high';
+}
+
+const MEAS_CELL = {
+  normal: 'text-green-700 bg-green-50',
+  risk:   'text-yellow-700 bg-yellow-50',
+  high:   'text-red-700 bg-red-50',
+};
+
+function groupMeasurementsByMonth(measurements) {
+  const groups = {};
+  measurements.forEach(m => {
+    const d = new Date(m.measurement_date + 'T00:00:00');
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    if (!groups[key]) groups[key] = { label, measurements: [] };
+    groups[key].measurements.push(m);
+  });
+  return Object.keys(groups).sort().reverse().map(k => ({ key: k, ...groups[k] }));
+}
+
+// ── Measurements Tab ─────────────────────────────────────────────────────────
+
+function MeasurementsTab({ clientId, data, onRefresh, clientGender }) {
+  const { measurements } = data;
+  const today = new Date().toISOString().split('T')[0];
+  const gender = clientGender || 'female';
+
+  const [form, setForm] = useState({
+    measurement_date: today,
+    waist_cm: '', hip_cm: '', chest_cm: '', arms_cm: '', thighs_cm: '', notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const monthGroups = useMemo(() => groupMeasurementsByMonth(measurements), [measurements]);
+
+  // Latest values for summary cards
+  const latest    = measurements.length > 0 ? measurements[0] : null;
+  const latestWaist = latest?.waist_cm ?? null;
+  const latestHip   = latest?.hip_cm   ?? null;
+  const latestWHR   = (latestWaist && latestHip) ? (latestWaist / latestHip).toFixed(2) : null;
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    const { waist_cm, hip_cm, chest_cm, arms_cm, thighs_cm } = form;
+    if (!waist_cm && !hip_cm && !chest_cm && !arms_cm && !thighs_cm) {
+      setError('Enter at least one measurement value');
+      return;
+    }
+    setSaving(true); setError('');
+    try {
+      await api.post(`/measurements/client/${clientId}`, {
+        measurement_date: form.measurement_date,
+        waist_cm:   waist_cm   ? parseFloat(waist_cm)   : null,
+        hip_cm:     hip_cm     ? parseFloat(hip_cm)     : null,
+        chest_cm:   chest_cm   ? parseFloat(chest_cm)   : null,
+        arms_cm:    arms_cm    ? parseFloat(arms_cm)    : null,
+        thighs_cm:  thighs_cm  ? parseFloat(thighs_cm)  : null,
+        notes: form.notes || null,
+      });
+      setForm(f => ({ ...f, waist_cm: '', hip_cm: '', chest_cm: '', arms_cm: '', thighs_cm: '', notes: '' }));
+      onRefresh();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save measurement');
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (mid) => {
+    if (!window.confirm('Delete this measurement entry?')) return;
+    try { await api.delete(`/measurements/${mid}`); onRefresh(); } catch {}
+  };
+
+  const waistLabel = gender === 'male' ? 'Men' : 'Women';
+  const waistNorm  = gender === 'male' ? '94'  : '80';
+  const waistRisk  = gender === 'male' ? '94–101' : '80–87';
+  const waistHigh  = gender === 'male' ? '102' : '88';
+  const whrNorm    = gender === 'male' ? '0.90' : '0.80';
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Summary Cards ── */}
+      {measurements.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {latestWaist != null && (() => {
+            const cls = classifyWaist(latestWaist, gender);
+            const colors = { normal: 'bg-green-50 text-green-700', risk: 'bg-yellow-50 text-yellow-700', high: 'bg-red-50 text-red-700' };
+            return (
+              <div className={`rounded-xl p-3 text-center ${colors[cls] || 'bg-gray-50 text-gray-700'}`}>
+                <div className="text-xl font-bold">{latestWaist}</div>
+                <div className="text-xs font-medium mt-0.5">Waist (cm)</div>
+                <div className="text-xs opacity-70 mt-0.5 capitalize">{cls}</div>
+              </div>
+            );
+          })()}
+          {latestHip != null && (
+            <div className="bg-sky-50 rounded-xl p-3 text-center">
+              <div className="text-xl font-bold text-sky-700">{latestHip}</div>
+              <div className="text-xs text-sky-500 font-medium mt-0.5">Hip (cm)</div>
+            </div>
+          )}
+          {latestWHR && (() => {
+            const cls = classifyWHR(parseFloat(latestWHR), gender);
+            const colors = { normal: 'bg-green-50 text-green-700', risk: 'bg-yellow-50 text-yellow-700', high: 'bg-red-50 text-red-700' };
+            return (
+              <div className={`rounded-xl p-3 text-center ${colors[cls] || 'bg-gray-50 text-gray-700'}`}>
+                <div className="text-xl font-bold">{latestWHR}</div>
+                <div className="text-xs font-medium mt-0.5">WHR</div>
+                <div className="text-xs opacity-70 mt-0.5 capitalize">{cls}</div>
+              </div>
+            );
+          })()}
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold text-gray-700">{measurements.length}</div>
+            <div className="text-xs text-gray-500 mt-0.5">Total Records</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Form ── */}
+      <div className="border border-gray-200 rounded-xl p-4">
+        <h4 className="text-sm font-semibold text-gray-900 mb-3">Add Measurements</h4>
+        {error && <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg mb-3">{error}</div>}
+        <form onSubmit={handleAdd}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="col-span-2 sm:col-span-1">
+              <label className="label">Date *</label>
+              <input className="input" type="date" required value={form.measurement_date}
+                onChange={e => setForm(f => ({ ...f, measurement_date: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Waist (cm)</label>
+              <input className="input" type="number" step="0.1" min="40" max="200" placeholder="e.g. 88"
+                value={form.waist_cm} onChange={e => setForm(f => ({ ...f, waist_cm: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Hip (cm)</label>
+              <input className="input" type="number" step="0.1" min="40" max="200" placeholder="e.g. 100"
+                value={form.hip_cm} onChange={e => setForm(f => ({ ...f, hip_cm: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Chest (cm)</label>
+              <input className="input" type="number" step="0.1" min="40" max="200" placeholder="e.g. 90"
+                value={form.chest_cm} onChange={e => setForm(f => ({ ...f, chest_cm: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Arms (cm)</label>
+              <input className="input" type="number" step="0.1" min="10" max="100" placeholder="e.g. 32"
+                value={form.arms_cm} onChange={e => setForm(f => ({ ...f, arms_cm: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Thighs (cm)</label>
+              <input className="input" type="number" step="0.1" min="20" max="120" placeholder="e.g. 58"
+                value={form.thighs_cm} onChange={e => setForm(f => ({ ...f, thighs_cm: e.target.value }))} />
+            </div>
+            <div className="col-span-2 sm:col-span-3">
+              <label className="label">Notes</label>
+              <input className="input" placeholder="Optional notes" value={form.notes}
+                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex justify-end mt-3">
+            <button type="submit" className="btn-primary text-sm" disabled={saving}>
+              {saving ? 'Saving...' : '+ Add Record'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ── Reference Legend ── */}
+      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 px-1">
+        <span className="font-medium text-gray-600">Waist ({waistLabel}):</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-200 inline-block"/>Normal &lt;{waistNorm}cm</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-yellow-200 inline-block"/>At Risk {waistRisk}cm</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-200 inline-block"/>High ≥{waistHigh}cm</span>
+        <span className="text-gray-300">|</span>
+        <span className="font-medium text-gray-600">WHR:</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-200 inline-block"/>Normal &lt;{whrNorm}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-200 inline-block"/>High risk if above</span>
+      </div>
+
+      {/* ── Monthly Grouped Records ── */}
+      {measurements.length === 0 ? (
+        <div className="text-center py-10">
+          <div className="text-4xl mb-2">📏</div>
+          <p className="text-gray-400 text-sm">No measurements yet. Use the form above to add the first record.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {monthGroups.map(group => (
+            <div key={group.key}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">{group.label}</span>
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{group.measurements.length} records</span>
+              </div>
+
+              <div className="border border-gray-100 rounded-xl overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Date</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-gray-500">Waist</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-gray-500">Hip</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-gray-500">WHR</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 hidden sm:table-cell">Chest</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 hidden sm:table-cell">Arms</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 hidden sm:table-cell">Thighs</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 hidden sm:table-cell">Notes</th>
+                      <th className="px-2 py-2 w-6" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {group.measurements.map(m => {
+                      const wc  = classifyWaist(m.waist_cm, gender);
+                      const whr = (m.waist_cm && m.hip_cm) ? (m.waist_cm / m.hip_cm).toFixed(2) : null;
+                      const whrCls = whr ? classifyWHR(parseFloat(whr), gender) : null;
+                      return (
+                        <tr key={m.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">
+                            {fmtReadingDate(m.measurement_date)}
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            {m.waist_cm != null
+                              ? <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold ${MEAS_CELL[wc] || ''}`}>{m.waist_cm}</span>
+                              : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            {m.hip_cm != null
+                              ? <span className="inline-block px-2 py-0.5 rounded-md text-xs font-bold bg-sky-50 text-sky-700">{m.hip_cm}</span>
+                              : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            {whr
+                              ? <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold ${MEAS_CELL[whrCls] || ''}`}>{whr}</span>
+                              : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-center hidden sm:table-cell">
+                            {m.chest_cm != null ? <span className="text-xs text-gray-700">{m.chest_cm}</span> : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-center hidden sm:table-cell">
+                            {m.arms_cm != null ? <span className="text-xs text-gray-700">{m.arms_cm}</span> : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-center hidden sm:table-cell">
+                            {m.thighs_cm != null ? <span className="text-xs text-gray-700">{m.thighs_cm}</span> : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-gray-400 hidden sm:table-cell">
+                            {m.notes || '—'}
+                          </td>
+                          <td className="px-2 py-2.5 text-center">
+                            <button onClick={() => handleDelete(m.id)}
+                              className="text-gray-200 hover:text-red-400 transition-colors leading-none" title="Delete">✕</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
