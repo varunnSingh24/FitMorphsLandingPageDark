@@ -52,6 +52,7 @@ export default function LeadDetail() {
   const [callLogs, setCallLogs]   = useState([]);
   const [medical, setMedical]     = useState(null);
   const [users, setUsers]         = useState([]);
+  const [sources, setSources]     = useState(DEFAULT_SOURCES_OBJ);
   const [tab, setTab]             = useState('timeline');
   const [modal, setModal]         = useState(null);
   const [loading, setLoading]     = useState(true);
@@ -86,6 +87,11 @@ export default function LeadDetail() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
+    // Fetch dynamic lead sources for everyone (custom ones added in Settings)
+    api.get('/settings/lead_sources')
+      .then(r => { if (r.data.value?.length) setSources(r.data.value); })
+      .catch(() => {}); // fall back to DEFAULT_SOURCES_OBJ
+
     if (['admin','manager'].includes(user?.role)) {
       api.get('/users').then(r => setUsers(r.data.users));
     }
@@ -259,7 +265,7 @@ export default function LeadDetail() {
             </div>
 
             {editing ? (
-              <EditForm form={editForm} setForm={setEditForm} onSave={handleSaveEdit} onCancel={() => setEditing(false)}/>
+              <EditForm form={editForm} setForm={setEditForm} onSave={handleSaveEdit} onCancel={() => setEditing(false)} sources={sources}/>
             ) : (
               <dl className="space-y-2.5">
                 <InfoRow icon="📞" label="Phone" value={<a href={`tel:${lead.phone}`} className="text-sky-600 font-mono hover:underline">{lead.phone}</a>}/>
@@ -271,7 +277,7 @@ export default function LeadDetail() {
                   {lead.city && <InfoRow icon="📍" label="Location" value={`${lead.locality ? lead.locality + ', ' : ''}${lead.city}`}/>}
                 </div>
                 <div className="border-t border-gray-100 pt-2.5 space-y-2.5">
-                  <InfoRow icon="🔗" label="Source" value={SOURCE_LABELS[lead.source] || lead.source || '—'}/>
+                  <InfoRow icon="🔗" label="Source" value={sources.find(s => s.key === lead.source)?.label || SOURCE_LABELS[lead.source] || lead.source || '—'}/>
                   {lead.source_detail && <InfoRow icon="" label="Detail" value={lead.source_detail}/>}
                 </div>
                 {lead.notes && (
@@ -1081,10 +1087,21 @@ function EmptyState({ icon, text }) {
   );
 }
 
-const SOURCES_OPTS = ['walk_in','instagram','facebook','google_ads','referral','website','phone_inquiry','other'];
+const DEFAULT_SOURCES_OBJ = [
+  { key: 'walk_in',       label: 'Walk-in' },
+  { key: 'instagram',     label: 'Instagram' },
+  { key: 'facebook',      label: 'Facebook' },
+  { key: 'google_ads',    label: 'Google Ads' },
+  { key: 'referral',      label: 'Referral' },
+  { key: 'website',       label: 'Website' },
+  { key: 'phone_inquiry', label: 'Phone Inquiry' },
+  { key: 'other',         label: 'Other' },
+];
 const INTERESTS    = ['weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other'];
 
-function EditForm({ form, setForm, onSave, onCancel }) {
+function EditForm({ form, setForm, onSave, onCancel, sources }) {
+  // Use dynamic sources from settings; fall back to built-in defaults
+  const srcOpts = sources?.length ? sources : DEFAULT_SOURCES_OBJ;
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
     <div className="space-y-3">
@@ -1099,10 +1116,18 @@ function EditForm({ form, setForm, onSave, onCancel }) {
         <div><label className="label">Locality</label><input className="input" value={form.locality || ''} onChange={e => set('locality', e.target.value)}/></div>
       </div>
       <div>
+        <label className="label">Priority</label>
+        <select className="select" value={form.priority || 'warm'} onChange={e => set('priority', e.target.value)}>
+          <option value="hot">🔥 Hot — Act now</option>
+          <option value="warm">🌤 Warm — Follow up</option>
+          <option value="cold">❄️ Cold — Low urgency</option>
+        </select>
+      </div>
+      <div>
         <label className="label">Source</label>
         <select className="select" value={form.source || ''} onChange={e => set('source', e.target.value)}>
           <option value="">Select</option>
-          {SOURCES_OPTS.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
+          {srcOpts.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
       </div>
       <div>
