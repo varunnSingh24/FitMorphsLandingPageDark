@@ -52,17 +52,19 @@ export default function LeadDetail() {
   const [callLogs, setCallLogs]   = useState([]);
   const [medical, setMedical]     = useState(null);
   const [users, setUsers]         = useState([]);
-  const [sources, setSources]     = useState(DEFAULT_SOURCES_OBJ);
-  const [tab, setTab]             = useState('timeline');
-  const [modal, setModal]         = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [editing, setEditing]     = useState(false);
-  const [editForm, setEditForm]   = useState({});
+  const [sources, setSources]         = useState(DEFAULT_SOURCES_OBJ);
+  const [programTypes, setProgramTypes] = useState(DEFAULT_PROGRAM_TYPES);
+  const [clientId, setClientId]       = useState(null);
+  const [tab, setTab]                 = useState('timeline');
+  const [modal, setModal]             = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [editing, setEditing]         = useState(false);
+  const [editForm, setEditForm]       = useState({});
   const [savingStatus, setSavingStatus] = useState(false);
   const [editMedical, setEditMedical] = useState(false);
   const [showConvert, setShowConvert] = useState(false);
   const [convertForm, setConvertForm] = useState({
-    dietitian_id: '', program_type: 'custom', start_date: new Date().toISOString().split('T')[0],
+    dietitian_id: '', program_type: '', start_date: new Date().toISOString().split('T')[0],
     end_date: '', target_weight_kg: '', notes: '',
   });
   const [converting, setConverting] = useState(false);
@@ -75,11 +77,19 @@ export default function LeadDetail() {
         api.get(`/call-logs/lead/${id}`),
         api.get(`/leads/${id}/medical`),
       ]);
-      setLead(leadRes.data.lead);
-      setEditForm(leadRes.data.lead);
+      const leadData = leadRes.data.lead;
+      setLead(leadData);
+      setEditForm(leadData);
       setActivities(actRes.data.activities);
       setCallLogs(callRes.data.callLogs);
       setMedical(medRes.data.medical);
+
+      // If already converted, look up the client ID so "View Client" can link directly
+      if (leadData.status === 'converted') {
+        api.get(`/clients?lead_id=${id}`)
+          .then(r => { if (r.data.clients?.[0]) setClientId(r.data.clients[0].id); })
+          .catch(() => {});
+      }
     } catch (e) {
       if (e.response?.status === 404) navigate('/leads');
     } finally { setLoading(false); }
@@ -87,10 +97,15 @@ export default function LeadDetail() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    // Fetch dynamic lead sources for everyone (custom ones added in Settings)
+    // Fetch dynamic lead sources (custom ones added in Settings)
     api.get('/settings/lead_sources')
       .then(r => { if (r.data.value?.length) setSources(r.data.value); })
-      .catch(() => {}); // fall back to DEFAULT_SOURCES_OBJ
+      .catch(() => {});
+
+    // Fetch dynamic program types for the convert modal
+    api.get('/settings/program_types')
+      .then(r => { if (r.data.value?.length) setProgramTypes(r.data.value); })
+      .catch(() => {});
 
     if (['admin','manager'].includes(user?.role)) {
       api.get('/users').then(r => setUsers(r.data.users));
@@ -198,7 +213,11 @@ export default function LeadDetail() {
                 </button>
               )}
               {lead.status === 'converted' && (
-                <Link to={`/clients`} className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors flex items-center gap-1.5">
+                <Link
+                  to={clientId ? `/clients/${clientId}` : '/clients'}
+                  className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   View Client
                 </Link>
               )}
@@ -488,15 +507,27 @@ export default function LeadDetail() {
               <div>
                 <label className="label">Assign Dietitian</label>
                 <select className="select" value={convertForm.dietitian_id} onChange={e => setConvertForm(f => ({ ...f, dietitian_id: e.target.value }))}>
-                  <option value="">Select dietitian</option>
-                  {users.filter(u => ['dietician','sales_agent'].includes(u.role)).map(u => (
+                  <option value="">Select dietitian (optional)</option>
+                  {users.filter(u => u.role === 'dietician').map(u => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="label">Program Type</label>
-                <input className="input" value={convertForm.program_type} onChange={e => setConvertForm(f => ({ ...f, program_type: e.target.value }))} placeholder="e.g. weight_loss, diabetes_reversal" />
+                <select
+                  className="select"
+                  value={convertForm.program_type}
+                  onChange={e => setConvertForm(f => ({ ...f, program_type: e.target.value }))}
+                >
+                  <option value="">Select program type</option>
+                  {programTypes.map(p => (
+                    <option key={p.key} value={p.key}>{p.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Add more program types in <Link to="/settings" className="text-sky-600 hover:underline">Settings → Program Types</Link>
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1096,6 +1127,15 @@ const DEFAULT_SOURCES_OBJ = [
   { key: 'website',       label: 'Website' },
   { key: 'phone_inquiry', label: 'Phone Inquiry' },
   { key: 'other',         label: 'Other' },
+];
+
+const DEFAULT_PROGRAM_TYPES = [
+  { key: 'weight_loss',        label: 'Weight Loss' },
+  { key: 'diabetes_reversal',  label: 'Diabetes Reversal' },
+  { key: 'muscle_gain',        label: 'Muscle Gain' },
+  { key: 'diet_plan',          label: 'Diet Plan' },
+  { key: 'general_fitness',    label: 'General Fitness' },
+  { key: 'custom',             label: 'Custom' },
 ];
 const INTERESTS    = ['weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other'];
 
