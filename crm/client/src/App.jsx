@@ -10,6 +10,7 @@ import AddLead from './pages/Leads/AddLead';
 import ClientList from './pages/Clients/ClientList';
 import ClientDetail from './pages/Clients/ClientDetail';
 import FollowUps from './pages/FollowUps';
+import Chat from './pages/Chat/Chat';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="clients" element={<ClientList />} />
             <Route path="clients/:id" element={<ClientDetail />} />
             <Route path="follow-ups" element={<FollowUps />} />
+            <Route path="chat" element={<Chat />} />
             <Route path="profile" element={<Profile />} />
             <Route path="profile/:id" element={<Profile />} />
             <Route path="reports" element={<AdminRoute><Reports /></AdminRoute>} />
