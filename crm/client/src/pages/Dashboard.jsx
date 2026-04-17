@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { timeAgo, STATUS_COLORS, STATUS_LABELS, formatDate } from '../utils/helpers';
@@ -114,15 +114,16 @@ export default function Dashboard() {
             <h2 className="font-semibold text-gray-900 text-sm">Pipeline Funnel</h2>
           </div>
           <div className="p-4">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={stats?.funnel || []} layout="vertical" margin={{ left: 60, right: 20 }}>
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="status" tick={{ fontSize: 11 }} tickFormatter={s => STATUS_LABELS[s] || s} width={80} />
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={stats?.funnel || []} layout="vertical" margin={{ left: 10, right: 48, top: 2, bottom: 2 }}>
+                <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="status" tick={{ fontSize: 11 }} tickFormatter={s => STATUS_LABELS[s] || s} width={90} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v, n, p) => [v, STATUS_LABELS[p.payload.status]]} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={22}>
                   {stats?.funnel?.map(entry => (
                     <Cell key={entry.status} fill={FUNNEL_COLORS[entry.status] || '#6b7280'} />
                   ))}
+                  <LabelList dataKey="count" position="right" style={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
