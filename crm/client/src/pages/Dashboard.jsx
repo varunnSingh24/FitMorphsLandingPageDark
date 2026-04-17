@@ -46,11 +46,11 @@ export default function Dashboard() {
   if (loading) return <div className="text-gray-500 text-center py-20">Loading dashboard...</div>;
 
   const statCards = [
-    { label: 'Total Leads', value: stats?.total ?? 0, color: 'text-gray-900', bg: 'bg-gray-50' },
-    { label: 'New Today', value: stats?.newToday ?? 0, color: 'text-sky-600', bg: 'bg-sky-50' },
-    { label: 'Contacted', value: stats?.contacted ?? 0, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Converted', value: stats?.converted ?? 0, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Lost', value: stats?.lost ?? 0, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Total Leads', value: stats?.total ?? 0,     color: 'text-gray-900',   bg: 'bg-gray-50',   sub: 'all time' },
+    { label: 'Added Today', value: stats?.newToday ?? 0,  color: 'text-sky-600',    bg: 'bg-sky-50',    sub: 'created today' },
+    { label: 'Contacted',   value: stats?.contacted ?? 0, color: 'text-purple-600', bg: 'bg-purple-50', sub: 'total in stage' },
+    { label: 'Converted',   value: stats?.converted ?? 0, color: 'text-green-600',  bg: 'bg-green-50',  sub: 'total all time' },
+    { label: 'Lost',        value: stats?.lost ?? 0,      color: 'text-red-600',    bg: 'bg-red-50',    sub: 'total all time' },
   ];
 
   return (
@@ -65,7 +65,8 @@ export default function Dashboard() {
         {statCards.map(c => (
           <div key={c.label} className={`card p-4 ${c.bg}`}>
             <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
-            <div className="text-xs text-gray-500 mt-1">{c.label}</div>
+            <div className="text-xs font-medium text-gray-700 mt-1">{c.label}</div>
+            <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">{c.sub}</div>
           </div>
         ))}
       </div>
