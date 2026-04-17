@@ -85,4 +85,65 @@ router.get('/team-performance', (req, res) => {
   res.json({ agents });
 });
 
+// GET /api/dashboard/activity-log?date=YYYY-MM-DD&user_id=N&mode=all
+router.get('/activity-log', (req, res) => {
+  const db = getDb();
+  const { role, id: userId } = req.user;
+  const { date, user_id, mode } = req.query;
+
+  // Agents can only see their own
+  const effectiveUserId = ['sales_agent', 'dietician'].includes(role)
+    ? userId
+    : (user_id ? parseInt(user_id) : null);
+
+  let conditions = [];
+  const params = [];
+
+  if (mode !== 'all' && date) {
+    conditions.push(`date(a.created_at) = ?`);
+    params.push(date);
+  } else if (mode !== 'all') {
+    // Default: today
+    conditions.push(`date(a.created_at) = ?`);
+    params.push(istToday());
+  }
+
+  if (effectiveUserId) {
+    conditions.push(`a.user_id = ?`);
+    params.push(effectiveUserId);
+  }
+
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const activities = db.prepare(`
+    SELECT a.id, a.lead_id, a.user_id, a.activity_type, a.description, a.created_at,
+           u.name as user_name, u.role as user_role,
+           l.full_name as lead_name, l.phone as lead_phone, l.status as lead_status
+    FROM activities a
+    JOIN users u ON a.user_id = u.id
+    JOIN leads l ON a.lead_id = l.id
+    ${where}
+    ORDER BY a.created_at DESC
+    LIMIT 200
+  `).all(...params);
+
+  // Summary counts
+  const summary = {
+    total: activities.length,
+    calls:          activities.filter(a => a.activity_type === 'call').length,
+    status_changes: activities.filter(a => a.activity_type === 'status_change').length,
+    notes:          activities.filter(a => a.activity_type === 'note').length,
+  };
+
+  // Users list for filter dropdown (admin/manager only)
+  let users = [];
+  if (['admin', 'manager'].includes(role)) {
+    users = db.prepare(
+      `SELECT id, name, role FROM users WHERE is_active = 1 AND role IN ('sales_agent','manager','dietician','admin') ORDER BY name`
+    ).all();
+  }
+
+  res.json({ activities, summary, users, date: date || istToday(), mode: mode || 'date' });
+});
+
 module.exports = router;
