@@ -10,7 +10,7 @@ router.use(authenticate);
 router.get('/', (req, res) => {
   const db = getDb();
   const { role, id: userId } = req.user;
-  const { status, dietitian_id, search } = req.query;
+  const { status, dietitian_id, search, lead_id } = req.query;
 
   let conditions = [];
   const params = [];
@@ -23,7 +23,8 @@ router.get('/', (req, res) => {
     params.push(dietitian_id);
   }
 
-  if (status) { conditions.push('c.status = ?'); params.push(status); }
+  if (lead_id) { conditions.push('c.lead_id = ?'); params.push(parseInt(lead_id)); }
+  if (status)  { conditions.push('c.status = ?');   params.push(status); }
   if (search) {
     conditions.push('(l.full_name LIKE ? OR l.phone LIKE ?)');
     params.push(`%${search}%`, `%${search}%`);
