@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate, formatDateTime, timeAgo } from '../../utils/helpers';
+import ReminderModal from '../../components/ReminderModal';
 
 const STATUS_COLORS = {
   active: 'bg-green-100 text-green-700',
@@ -45,6 +46,7 @@ export default function ClientDetail() {
   const [editForm, setEditForm] = useState({});
   const [dietitians, setDietitians] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
   const [bslData, setBslData] = useState({ readings: [], hba1c: [] });
   const [measurementsData, setMeasurementsData] = useState({ measurements: [] });
 
@@ -164,6 +166,17 @@ export default function ClientDetail() {
   return (
     <div className="space-y-5 max-w-7xl">
 
+      {/* Reminder Modal */}
+      {showReminder && (
+        <ReminderModal
+          refType="client"
+          refId={client.id}
+          refName={client.full_name}
+          defaultTitle={`Check in with ${client.full_name}`}
+          onClose={() => setShowReminder(false)}
+        />
+      )}
+
       {/* Header Card */}
       <div className="card overflow-hidden">
         <div className="h-2 bg-gradient-to-r from-green-400 via-teal-500 to-sky-500" />
@@ -196,6 +209,9 @@ export default function ClientDetail() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={() => setShowCheckinForm(true)} className="btn-primary flex items-center gap-1.5 text-sm">
                 <PlusIcon className="w-3.5 h-3.5" /> Log Check-in
+              </button>
+              <button onClick={() => setShowReminder(true)} className="btn-secondary flex items-center gap-1.5 text-sm" title="Set Reminder">
+                🔔 Remind
               </button>
               <button onClick={() => setEditing(!editing)} className="btn-secondary text-sm">
                 {editing ? 'Cancel' : 'Edit'}
