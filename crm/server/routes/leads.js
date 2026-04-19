@@ -273,12 +273,12 @@ router.post('/bulk-assign', requireRole('admin', 'manager'), (req, res) => {
 
 // Helper: delete a client and all its child records by client id
 function deleteClientData(db, clientId) {
-  db.prepare('DELETE FROM client_checkins  WHERE client_id = ?').run(clientId);
-  db.prepare('DELETE FROM bsl_readings     WHERE client_id = ?').run(clientId);
-  db.prepare('DELETE FROM hba1c_records    WHERE client_id = ?').run(clientId);
-  db.prepare('DELETE FROM measurements     WHERE client_id = ?').run(clientId);
+  db.prepare('DELETE FROM checkins        WHERE client_id = ?').run(clientId);
+  db.prepare('DELETE FROM bsl_readings    WHERE client_id = ?').run(clientId);
+  db.prepare('DELETE FROM hba1c_records   WHERE client_id = ?').run(clientId);
+  db.prepare('DELETE FROM measurements    WHERE client_id = ?').run(clientId);
   db.prepare("DELETE FROM reminders WHERE ref_type = 'client' AND ref_id = ?").run(clientId);
-  db.prepare('DELETE FROM clients          WHERE id = ?').run(clientId);
+  db.prepare('DELETE FROM clients         WHERE id = ?').run(clientId);
 }
 
 // Helper: fully delete one lead and everything linked to it
@@ -303,8 +303,13 @@ router.delete('/:id', requireRole('admin', 'manager'), (req, res) => {
   const lead = db.prepare('SELECT id FROM leads WHERE id = ?').get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-  db.transaction(() => deleteLeadCascade(db, lead.id))();
-  res.json({ success: true });
+  try {
+    db.transaction(() => deleteLeadCascade(db, lead.id))();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[DELETE /leads/:id] failed:', err);
+    res.status(500).json({ error: 'Failed to delete lead', detail: err.message });
+  }
 });
 
 // POST /api/leads/bulk-delete (admin/manager only)
@@ -313,11 +318,15 @@ router.post('/bulk-delete', requireRole('admin', 'manager'), (req, res) => {
   const { lead_ids } = req.body;
   if (!lead_ids?.length) return res.status(400).json({ error: 'lead_ids required' });
 
-  db.transaction(() => {
-    lead_ids.forEach(id => deleteLeadCascade(db, id));
-  })();
-
-  res.json({ success: true, count: lead_ids.length });
+  try {
+    db.transaction(() => {
+      lead_ids.forEach(id => deleteLeadCascade(db, id));
+    })();
+    res.json({ success: true, count: lead_ids.length });
+  } catch (err) {
+    console.error('[POST /leads/bulk-delete] failed:', err);
+    res.status(500).json({ error: 'Failed to delete leads', detail: err.message });
+  }
 });
 
 module.exports = router;
