@@ -146,4 +146,52 @@ router.get('/activity-log', (req, res) => {
   res.json({ activities, summary, users, date: date || istToday(), mode: mode || 'date' });
 });
 
+// GET /api/dashboard/daily-activity?date=YYYY-MM-DD&user_id=N
+// Returns per-member daily stats. Agents see only themselves.
+router.get('/daily-activity', (req, res) => {
+  const db = getDb();
+  const { role, id: userId } = req.user;
+  const date = req.query.date || istToday();
+
+  // Agents can only see themselves
+  const filterUserId = ['sales_agent', 'dietician'].includes(role)
+    ? userId
+    : (req.query.user_id ? parseInt(req.query.user_id) : null);
+
+  const userWhere = filterUserId ? `AND u.id = ${filterUserId}` : '';
+
+  const rows = db.prepare(`
+    SELECT
+      u.id, u.name, u.role,
+      (SELECT COUNT(*) FROM call_logs cl
+        WHERE cl.called_by = u.id AND date(cl.created_at) = ?) AS calls,
+      (SELECT COUNT(*) FROM leads l
+        WHERE l.assigned_to = u.id AND date(l.created_at) = ?) AS leads_added,
+      (SELECT COUNT(*) FROM activities a
+        WHERE a.user_id = u.id AND a.activity_type = 'note' AND date(a.created_at) = ?) AS notes,
+      (SELECT COUNT(*) FROM activities a
+        WHERE a.user_id = u.id AND a.activity_type = 'status_change' AND date(a.created_at) = ?) AS stage_moves,
+      (SELECT COUNT(*) FROM leads l
+        WHERE l.assigned_to = u.id AND l.status = 'converted' AND date(l.updated_at) = ?) AS conversions,
+      (SELECT COUNT(*) FROM follow_ups f
+        WHERE f.assigned_to = u.id AND f.is_completed = 1 AND date(f.updated_at) = ?) AS followups_done
+    FROM users u
+    WHERE u.is_active = 1
+      AND u.role IN ('sales_agent', 'manager', 'dietician', 'admin')
+      ${userWhere}
+    ORDER BY (calls + leads_added + notes + stage_moves) DESC
+  `).all(date, date, date, date, date, date);
+
+  // Users list for dropdown (admin/manager only)
+  let users = [];
+  if (['admin', 'manager'].includes(role)) {
+    users = db.prepare(
+      `SELECT id, name, role FROM users WHERE is_active = 1
+       AND role IN ('sales_agent','manager','dietician','admin') ORDER BY name`
+    ).all();
+  }
+
+  res.json({ rows, date, users });
+});
+
 module.exports = router;

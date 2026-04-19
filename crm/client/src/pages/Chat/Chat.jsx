@@ -4,13 +4,20 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
 // ── Socket singleton ─────────────────────────────────────────────────────────
+// In dev: Vite runs on :3000, server on :3001 → replace port.
+// In prod: same origin (nginx should proxy /socket.io/ → :3001).
 let socketInstance = null;
 function getSocket() {
   if (!socketInstance) {
     const token = localStorage.getItem('crm_token');
-    socketInstance = io(window.location.origin.replace(':3000', ':3001'), {
+    const isDev  = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const url    = isDev
+      ? window.location.origin.replace(/:\d+$/, ':3001')
+      : window.location.origin;          // prod: nginx proxies /socket.io/
+    socketInstance = io(url, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
     });
   }
   return socketInstance;
@@ -130,12 +137,30 @@ export default function Chat() {
     inputRef.current?.focus();
   };
 
-  // Send message
-  const sendMessage = (e) => {
+  // Send message — socket if connected, REST fallback otherwise
+  const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !activeRoom) return;
-    socket.emit('send_message', { room_id: activeRoom.id, message: input.trim() });
+    const msg = input.trim();
+    if (!msg || !activeRoom) return;
     setInput('');
+
+    if (socket.connected) {
+      socket.emit('send_message', { room_id: activeRoom.id, message: msg });
+    } else {
+      // REST fallback (works even without WebSocket proxy)
+      try {
+        const r = await api.post(`/chat/rooms/${activeRoom.id}/messages`, { message: msg });
+        // Socket didn't echo back to us, so add locally
+        setMessages(prev => [...prev, r.data.message]);
+        setRooms(prev => prev.map(room =>
+          room.id === activeRoom.id
+            ? { ...room, last_message: msg, last_message_at: r.data.message.created_at }
+            : room
+        ));
+      } catch {
+        setInput(msg); // restore on failure
+      }
+    }
   };
 
   // Scroll to bottom on new messages

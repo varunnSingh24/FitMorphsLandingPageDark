@@ -103,6 +103,39 @@ router.get('/rooms/:roomId/messages', (req, res) => {
   res.json({ messages, members });
 });
 
+// POST /api/chat/rooms/:roomId/messages — REST fallback for sending (used when socket not connected)
+router.post('/rooms/:roomId/messages', (req, res) => {
+  const db = getDb();
+  const userId = req.user.id;
+  const { message } = req.body;
+  if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
+
+  const member = db.prepare(
+    'SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ?'
+  ).get(req.params.roomId, userId);
+  if (!member) return res.status(403).json({ error: 'Not a member of this room' });
+
+  const now = istNow();
+  const result = db.prepare(
+    'INSERT INTO chat_messages (room_id, sender_id, message, created_at) VALUES (?, ?, ?, ?)'
+  ).run(req.params.roomId, userId, message.trim(), now);
+
+  const newMsg = {
+    id: result.lastInsertRowid,
+    room_id: parseInt(req.params.roomId),
+    sender_id: userId,
+    sender_name: req.user.name,
+    message: message.trim(),
+    created_at: now,
+  };
+
+  // Broadcast to all other room members via socket.io
+  const io = req.app.get('io');
+  if (io) io.to(`room:${req.params.roomId}`).emit('new_message', newMsg);
+
+  res.status(201).json({ message: newMsg });
+});
+
 // PUT /api/chat/rooms/:roomId/read — mark room as read
 router.put('/rooms/:roomId/read', (req, res) => {
   const db = getDb();
