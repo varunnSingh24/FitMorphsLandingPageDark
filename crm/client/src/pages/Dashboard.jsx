@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import api from '../utils/api';
@@ -21,6 +21,13 @@ export default function Dashboard() {
   const [callLead, setCallLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Daily team activity state
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [actDate, setActDate]     = useState(todayStr);
+  const [actUserId, setActUserId] = useState('');
+  const [actData, setActData]     = useState({ rows: [], users: [] });
+  const [actLoading, setActLoading] = useState(false);
+
   const load = async () => {
     try {
       const [statsRes, fuRes] = await Promise.all([
@@ -41,7 +48,19 @@ export default function Dashboard() {
     }
   };
 
+  const loadDailyActivity = useCallback(async (date, userId) => {
+    setActLoading(true);
+    try {
+      const params = new URLSearchParams({ date });
+      if (userId) params.set('user_id', userId);
+      const r = await api.get(`/dashboard/daily-activity?${params}`);
+      setActData(r.data);
+    } catch {}
+    finally { setActLoading(false); }
+  }, []);
+
   useEffect(() => { load(); }, []);
+  useEffect(() => { loadDailyActivity(actDate, actUserId); }, [actDate, actUserId, loadDailyActivity]);
 
   if (loading) return <div className="text-gray-500 text-center py-20">Loading dashboard...</div>;
 
@@ -109,26 +128,114 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Pipeline Funnel */}
+        {/* Daily Team Activity */}
         <div className="lg:col-span-2 card">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900 text-sm">Pipeline Funnel</h2>
-          </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={stats?.funnel || []} layout="vertical" margin={{ left: 10, right: 48, top: 2, bottom: 2 }}>
-                <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="status" tick={{ fontSize: 11 }} tickFormatter={s => STATUS_LABELS[s] || s} width={90} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v, n, p) => [v, STATUS_LABELS[p.payload.status]]} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={22}>
-                  {stats?.funnel?.map(entry => (
-                    <Cell key={entry.status} fill={FUNNEL_COLORS[entry.status] || '#6b7280'} />
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-gray-900 text-sm">📊 Today's Team Activity</h2>
+            <div className="flex items-center gap-2">
+              {/* User filter — admin/manager only */}
+              {['admin','manager'].includes(user?.role) && actData.users.length > 0 && (
+                <select
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                  value={actUserId}
+                  onChange={e => setActUserId(e.target.value)}
+                >
+                  <option value="">All Members</option>
+                  {actData.users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
-                  <LabelList dataKey="count" position="right" style={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                </select>
+              )}
+              {/* Date navigation */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setActDate(d => { const dt = new Date(d); dt.setDate(dt.getDate() - 1); return dt.toISOString().split('T')[0]; })}
+                  className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                >‹</button>
+                <span className="text-xs font-medium text-gray-700 min-w-[80px] text-center">
+                  {actDate === todayStr ? 'Today' : new Date(actDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                </span>
+                <button
+                  onClick={() => setActDate(d => { const dt = new Date(d); dt.setDate(dt.getDate() + 1); return dt.toISOString().split('T')[0]; })}
+                  disabled={actDate >= todayStr}
+                  className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                >›</button>
+              </div>
+            </div>
           </div>
+
+          {/* Table */}
+          {actLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="w-5 h-5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : actData.rows.length === 0 ? (
+            <div className="text-center py-10 text-gray-400 text-sm">No activity recorded for this date.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Member</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-sky-600">📞 Calls</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-indigo-600">👤 New Leads</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500">📝 Notes</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-amber-600">🔄 Stage Moves</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-green-600">✅ Converted</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-medium text-purple-600 hidden sm:table-cell">📅 Follow-ups</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {actData.rows.map(row => {
+                    const total = row.calls + row.leads_added + row.notes + row.stage_moves;
+                    const isMe  = row.id === user?.id;
+                    return (
+                      <tr key={row.id} className={`hover:bg-gray-50 transition-colors ${isMe ? 'bg-sky-50/40' : ''}`}>
+                        <td className="px-4 py-2.5">
+                          <div className="font-medium text-gray-900 text-sm">
+                            {row.name}{isMe && <span className="ml-1 text-xs text-sky-500">(you)</span>}
+                          </div>
+                          <div className="text-xs text-gray-400 capitalize">{row.role?.replace('_', ' ')}</div>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className={`text-sm font-bold ${row.calls > 0 ? 'text-sky-600' : 'text-gray-300'}`}>{row.calls}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className={`text-sm font-bold ${row.leads_added > 0 ? 'text-indigo-600' : 'text-gray-300'}`}>{row.leads_added}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className={`text-sm font-bold ${row.notes > 0 ? 'text-gray-700' : 'text-gray-300'}`}>{row.notes}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className={`text-sm font-bold ${row.stage_moves > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{row.stage_moves}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className={`text-sm font-bold ${row.conversions > 0 ? 'text-green-600' : 'text-gray-300'}`}>{row.conversions}</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center hidden sm:table-cell">
+                          <span className={`text-sm font-bold ${row.followups_done > 0 ? 'text-purple-600' : 'text-gray-300'}`}>{row.followups_done}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {/* Totals row */}
+                {actData.rows.length > 1 && (
+                  <tfoot className="border-t-2 border-gray-200 bg-gray-50">
+                    <tr>
+                      <td className="px-4 py-2 text-xs font-bold text-gray-600">Total</td>
+                      {['calls','leads_added','notes','stage_moves','conversions','followups_done'].map((key, i) => (
+                        <td key={key} className={`px-3 py-2 text-center text-xs font-bold text-gray-700 ${i === 5 ? 'hidden sm:table-cell' : ''}`}>
+                          {actData.rows.reduce((s, r) => s + (r[key] || 0), 0)}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
