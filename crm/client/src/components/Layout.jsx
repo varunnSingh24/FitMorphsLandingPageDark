@@ -27,6 +27,11 @@ export default function Layout() {
   const [bellLoading, setBellLoading] = useState(false);
   const bellRef = useRef(null);
 
+  // Popup notification state
+  const shownPopupIds  = useRef(new Set());
+  const isInitialLoad  = useRef(true);
+  const [popups, setPopups] = useState([]);
+
   // Chat unread count
   const [chatUnread, setChatUnread] = useState(0);
 
@@ -42,15 +47,39 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Fetch reminders
+  // Fetch reminders + trigger popups for newly-due ones
   const fetchReminders = useCallback(async () => {
     try {
       const res = await api.get('/reminders');
-      setReminders(res.data.reminders || []);
+      const all = res.data.reminders || [];
+      setReminders(all);
       setOverdueCount(res.data.overdueCount || 0);
+
+      const now = new Date();
+      const dueNow = all.filter(r => {
+        const d = parseUTCDate(r.due_at);
+        return d && d <= now;
+      });
+
+      if (isInitialLoad.current) {
+        // On first load: silently mark all already-overdue as seen (no popup flood)
+        dueNow.forEach(r => shownPopupIds.current.add(r.id));
+        isInitialLoad.current = false;
+      } else {
+        // On subsequent polls: popup only newly-due reminders
+        const newlyDue = dueNow.filter(r => !shownPopupIds.current.has(r.id));
+        if (newlyDue.length > 0) {
+          newlyDue.forEach(r => shownPopupIds.current.add(r.id));
+          setPopups(prev => [...newlyDue, ...prev].slice(0, 4)); // max 4 stacked
+        }
+      }
     } catch {
       // silently fail — reminders are not critical
     }
+  }, []);
+
+  const dismissPopup = useCallback((id) => {
+    setPopups(prev => prev.filter(p => p.id !== id));
   }, []);
 
   // Poll reminders every 60s
@@ -323,6 +352,95 @@ export default function Layout() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>
+      </div>
+
+      {/* ── Reminder Popup Stack (bottom-right) ── */}
+      {popups.length > 0 && (
+        <div className="fixed bottom-5 right-5 z-[200] flex flex-col gap-3 items-end pointer-events-none">
+          {popups.map(r => (
+            <div key={r.id} className="pointer-events-auto">
+              <ReminderPopupCard
+                reminder={r}
+                onDone={() => { handleDone(r.id); dismissPopup(r.id); }}
+                onSnooze={(d) => { handleSnooze(r.id, d); dismissPopup(r.id); }}
+                onDismiss={() => dismissPopup(r.id)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Reminder Popup Card ──────────────────────────────────────────────────────
+
+function ReminderPopupCard({ reminder: r, onDone, onSnooze, onDismiss }) {
+  const stripeColor = {
+    checkin:       'from-green-400 to-emerald-400',
+    lead_followup: 'from-sky-400 to-blue-400',
+    custom:        'from-purple-400 to-violet-400',
+  };
+  const icon = {
+    checkin:       '📋',
+    lead_followup: '📞',
+    custom:        '🔔',
+  };
+
+  return (
+    <div className="w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden">
+      {/* Coloured stripe */}
+      <div className={`h-1.5 bg-gradient-to-r ${stripeColor[r.reminder_type] || stripeColor.custom}`} />
+
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="text-2xl flex-shrink-0 mt-0.5">
+            {icon[r.reminder_type] || '🔔'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-gray-900 leading-tight">{r.title}</p>
+              <button
+                onClick={onDismiss}
+                className="text-gray-300 hover:text-gray-500 flex-shrink-0 text-lg leading-none mt-0.5"
+                title="Dismiss"
+              >✕</button>
+            </div>
+            {r.ref_name && (
+              <p className="text-xs font-medium text-gray-600 mt-0.5">{r.ref_name}</p>
+            )}
+            {r.ref_phone && (
+              <a href={`tel:${r.ref_phone}`} className="text-xs text-sky-600 font-mono hover:underline block">
+                {r.ref_phone}
+              </a>
+            )}
+            {r.message && (
+              <p className="text-xs text-gray-400 mt-1 line-clamp-2">{r.message}</p>
+            )}
+            <p className="text-xs text-amber-600 font-semibold mt-1.5">🔔 Reminder is due now</p>
+          </div>
+        </div>
+
+        {/* Action row */}
+        <div className="flex items-center gap-1.5 mt-3">
+          <button
+            onClick={onDone}
+            className="flex-1 text-xs py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors"
+          >
+            ✓ Done
+          </button>
+          {r.ref_phone && (
+            <a
+              href={`tel:${r.ref_phone}`}
+              className="flex-1 text-xs py-1.5 rounded-lg bg-sky-100 text-sky-700 hover:bg-sky-200 font-medium transition-colors text-center block"
+            >
+              📞 Call
+            </a>
+          )}
+          <button onClick={() => onSnooze('1h')} className="text-xs px-2 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">1h</button>
+          <button onClick={() => onSnooze('3h')} className="text-xs px-2 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">3h</button>
+          <button onClick={() => onSnooze('tomorrow')} className="text-xs px-2 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Tmr</button>
+        </div>
       </div>
     </div>
   );

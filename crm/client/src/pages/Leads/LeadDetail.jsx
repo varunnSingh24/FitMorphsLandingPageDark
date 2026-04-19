@@ -9,6 +9,7 @@ import {
 import LogCallModal from '../../components/LogCallModal';
 import AddNoteModal from '../../components/AddNoteModal';
 import ScheduleFollowUpModal from '../../components/ScheduleFollowUpModal';
+import ReminderModal from '../../components/ReminderModal';
 
 const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
 const PIPELINE = ['new','contacted','interested','follow_up','negotiation','converted'];
@@ -68,6 +69,7 @@ export default function LeadDetail() {
     end_date: '', target_weight_kg: '', notes: '',
   });
   const [converting, setConverting] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -205,6 +207,9 @@ export default function LeadDetail() {
               </button>
               <button onClick={() => setModal('followup')} className="btn-secondary flex items-center gap-1.5 text-sm">
                 <CalendarIcon className="w-3.5 h-3.5"/> Follow-Up
+              </button>
+              <button onClick={() => setShowReminder(true)} className="btn-secondary flex items-center gap-1.5 text-sm" title="Set Reminder">
+                🔔 Remind
               </button>
               {['admin','manager'].includes(user?.role) && lead.status !== 'converted' && (
                 <button onClick={() => setShowConvert(true)} className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm">
@@ -494,6 +499,15 @@ export default function LeadDetail() {
       {modal === 'call'     && <LogCallModal lead={lead} onClose={() => setModal(null)} onSuccess={() => { setModal(null); load(); }}/>}
       {modal === 'note'     && <AddNoteModal lead={lead} onClose={() => setModal(null)} onSuccess={() => { setModal(null); load(); }}/>}
       {modal === 'followup' && <ScheduleFollowUpModal lead={lead} onClose={() => setModal(null)} onSuccess={() => { setModal(null); load(); }}/>}
+      {showReminder && (
+        <ReminderModal
+          refType="lead"
+          refId={lead.id}
+          refName={lead.full_name}
+          defaultTitle={`Follow up with ${lead.full_name}`}
+          onClose={() => setShowReminder(false)}
+        />
+      )}
 
       {/* Convert to Client Modal */}
       {showConvert && (
