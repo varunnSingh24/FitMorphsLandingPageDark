@@ -194,4 +194,58 @@ router.get('/daily-activity', (req, res) => {
   res.json({ rows, date, users });
 });
 
+// GET /api/dashboard/todays-leads?date=YYYY-MM-DD
+// Returns today's leads: total count + breakdown by status + per-agent progress
+router.get('/todays-leads', (req, res) => {
+  const db = getDb();
+  const { role, id: userId } = req.user;
+  const date = req.query.date || istToday();
+
+  const userFilter = ['sales_agent','dietician'].includes(role)
+    ? `AND l.assigned_to = ${userId}`
+    : '';
+
+  // Status breakdown of today's leads
+  const statuses = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
+  const byStatus = statuses.map(status => ({
+    status,
+    count: db.prepare(
+      `SELECT COUNT(*) as c FROM leads l WHERE date(l.created_at) = ? AND l.status = ? ${userFilter}`
+    ).get(date, status).c
+  }));
+
+  const total = byStatus.reduce((s, r) => s + r.count, 0);
+
+  // Per-agent breakdown of today's leads
+  const byAgent = db.prepare(`
+    SELECT
+      u.id, u.name, u.role,
+      COUNT(l.id) as total,
+      SUM(CASE WHEN l.status = 'new'         THEN 1 ELSE 0 END) as new_count,
+      SUM(CASE WHEN l.status = 'contacted'   THEN 1 ELSE 0 END) as contacted,
+      SUM(CASE WHEN l.status = 'interested'  THEN 1 ELSE 0 END) as interested,
+      SUM(CASE WHEN l.status IN ('follow_up','negotiation') THEN 1 ELSE 0 END) as in_progress,
+      SUM(CASE WHEN l.status = 'converted'   THEN 1 ELSE 0 END) as converted,
+      SUM(CASE WHEN l.status IN ('lost','junk') THEN 1 ELSE 0 END) as dropped
+    FROM leads l
+    JOIN users u ON l.assigned_to = u.id
+    WHERE date(l.created_at) = ? ${userFilter}
+    GROUP BY u.id, u.name, u.role
+    ORDER BY total DESC
+  `).all(date);
+
+  // Leads added today with their current status (for the mini-list)
+  const leads = db.prepare(`
+    SELECT l.id, l.full_name, l.phone, l.status, l.source, l.priority, l.created_at,
+           u.name as assigned_name
+    FROM leads l
+    LEFT JOIN users u ON l.assigned_to = u.id
+    WHERE date(l.created_at) = ? ${userFilter}
+    ORDER BY l.created_at DESC
+    LIMIT 20
+  `).all(date);
+
+  res.json({ total, byStatus, byAgent, leads, date });
+});
+
 module.exports = router;

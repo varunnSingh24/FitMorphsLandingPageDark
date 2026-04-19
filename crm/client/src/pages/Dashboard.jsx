@@ -21,12 +21,21 @@ export default function Dashboard() {
   const [callLead, setCallLead] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // IST today (not UTC) — avoids midnight edge cases
+  const istToday = () => {
+    const IST = 5.5 * 60 * 60 * 1000;
+    return new Date(Date.now() + IST).toISOString().split('T')[0];
+  };
+  const todayStr = istToday();
+
   // Daily team activity state
-  const todayStr = new Date().toISOString().split('T')[0];
   const [actDate, setActDate]     = useState(todayStr);
   const [actUserId, setActUserId] = useState('');
   const [actData, setActData]     = useState({ rows: [], users: [] });
   const [actLoading, setActLoading] = useState(false);
+
+  // Today's leads pipeline state
+  const [todayLeads, setTodayLeads] = useState({ total: 0, byStatus: [], byAgent: [], leads: [] });
 
   const load = async () => {
     try {
@@ -41,6 +50,12 @@ export default function Dashboard() {
         const teamRes = await api.get('/dashboard/team-performance');
         setTeam(teamRes.data.agents);
       }
+
+      // Today's leads breakdown — visible to everyone
+      try {
+        const tl = await api.get(`/dashboard/todays-leads?date=${todayStr}`);
+        setTodayLeads(tl.data);
+      } catch {}
     } catch (e) {
       console.error(e);
     } finally {
@@ -89,6 +104,9 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Today's Leads Pipeline — shows how today's new leads are moving through stages */}
+      <TodaysLeadsPipeline data={todayLeads} userRole={user?.role} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Follow-ups today */}
@@ -484,6 +502,129 @@ function DailyActivityLog({ userRole }) {
             })}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Today's Leads Pipeline ────────────────────────────────────────────────
+// Answers: "We got X leads today — what's happening with them?"
+function TodaysLeadsPipeline({ data, userRole }) {
+  const { total, byStatus, byAgent, leads } = data;
+
+  const STAGE_META = {
+    new:         { label: 'New',         color: 'bg-gray-100 text-gray-700 border-gray-200',     dot: 'bg-gray-400' },
+    contacted:   { label: 'Contacted',   color: 'bg-sky-100 text-sky-700 border-sky-200',        dot: 'bg-sky-500' },
+    interested:  { label: 'Interested',  color: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+    follow_up:   { label: 'Follow-Up',   color: 'bg-amber-100 text-amber-700 border-amber-200',  dot: 'bg-amber-500' },
+    negotiation: { label: 'Negotiation', color: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+    converted:   { label: 'Converted',   color: 'bg-green-100 text-green-700 border-green-200',  dot: 'bg-green-500' },
+    lost:        { label: 'Lost',        color: 'bg-red-100 text-red-700 border-red-200',        dot: 'bg-red-500' },
+    junk:        { label: 'Junk',        color: 'bg-gray-100 text-gray-500 border-gray-200',     dot: 'bg-gray-300' },
+  };
+
+  if (total === 0) {
+    return (
+      <div className="card">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900 text-sm">📥 Today's Lead Pipeline</h2>
+        </div>
+        <div className="text-center py-8 text-gray-400 text-sm">
+          No new leads today yet. Add one using <span className="font-medium">+ New Lead</span>.
+        </div>
+      </div>
+    );
+  }
+
+  // % worked = anything past 'new' / total
+  const workedCount = byStatus
+    .filter(s => s.status !== 'new')
+    .reduce((sum, s) => sum + s.count, 0);
+  const workedPct = total > 0 ? Math.round((workedCount / total) * 100) : 0;
+
+  return (
+    <div className="card">
+      <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="font-semibold text-gray-900 text-sm">📥 Today's Lead Pipeline</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {total} {total === 1 ? 'lead' : 'leads'} came in today • {workedPct}% already worked
+          </p>
+        </div>
+        <Link to={`/leads?date_from=${data.date}&date_to=${data.date}`} className="text-xs text-sky-600 hover:underline">
+          View all today's leads →
+        </Link>
+      </div>
+
+      {/* Stage pills — click to filter leads view */}
+      <div className="px-4 py-3 border-b border-gray-50 flex flex-wrap gap-2">
+        {byStatus.filter(s => s.count > 0).map(s => {
+          const meta = STAGE_META[s.status] || { label: s.status, color: 'bg-gray-100 text-gray-700', dot: 'bg-gray-400' };
+          return (
+            <Link
+              key={s.status}
+              to={`/leads?status=${s.status}&date_from=${data.date}&date_to=${data.date}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${meta.color} hover:opacity-80 transition-opacity`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+              {meta.label}
+              <span className="font-bold ml-0.5">{s.count}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Per-agent breakdown — admin/manager only */}
+      {['admin','manager'].includes(userRole) && byAgent.length > 0 && (
+        <div className="px-4 py-3 border-b border-gray-50">
+          <div className="text-xs font-medium text-gray-600 mb-2">Assigned to team:</div>
+          <div className="space-y-1.5">
+            {byAgent.map(a => (
+              <div key={a.id} className="flex items-center gap-3 text-xs">
+                <div className="flex-shrink-0 w-24 sm:w-32 truncate">
+                  <span className="font-medium text-gray-800">{a.name}</span>
+                  <span className="text-gray-400 ml-1">({a.total})</span>
+                </div>
+                <div className="flex-1 flex h-5 rounded overflow-hidden bg-gray-100">
+                  {a.new_count    > 0 && <div className="bg-gray-400"   style={{ width: `${(a.new_count / a.total) * 100}%` }} title={`${a.new_count} new`} />}
+                  {a.contacted    > 0 && <div className="bg-sky-500"    style={{ width: `${(a.contacted / a.total) * 100}%` }} title={`${a.contacted} contacted`} />}
+                  {a.interested   > 0 && <div className="bg-purple-500" style={{ width: `${(a.interested / a.total) * 100}%` }} title={`${a.interested} interested`} />}
+                  {a.in_progress  > 0 && <div className="bg-amber-500"  style={{ width: `${(a.in_progress / a.total) * 100}%` }} title={`${a.in_progress} follow-up / negotiation`} />}
+                  {a.converted    > 0 && <div className="bg-green-500"  style={{ width: `${(a.converted / a.total) * 100}%` }} title={`${a.converted} converted`} />}
+                  {a.dropped      > 0 && <div className="bg-red-400"    style={{ width: `${(a.dropped / a.total) * 100}%` }} title={`${a.dropped} lost/junk`} />}
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0 text-[10px] text-gray-500">
+                  {a.converted > 0 && <span className="text-green-600 font-semibold">{a.converted} won</span>}
+                  {a.new_count > 0 && <span className="text-gray-400">{a.new_count} untouched</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Latest today's leads list */}
+      <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
+        {leads.map(l => {
+          const meta = STAGE_META[l.status] || STAGE_META.new;
+          return (
+            <Link
+              key={l.id}
+              to={`/leads/${l.id}`}
+              className="flex items-center justify-between px-4 py-2 hover:bg-gray-50 transition-colors"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-gray-900 truncate">{l.full_name}</div>
+                <div className="text-xs text-gray-500 truncate">
+                  {l.phone} {l.source && `• ${l.source.replace('_', ' ')}`} {l.assigned_name && `• ${l.assigned_name}`}
+                </div>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2 ${meta.color}`}>
+                {meta.label}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
