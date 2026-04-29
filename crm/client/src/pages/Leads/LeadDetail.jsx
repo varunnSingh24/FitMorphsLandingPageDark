@@ -4,7 +4,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import {
   STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, SOURCE_LABELS,
-  INTEREST_LABELS, OUTCOME_COLORS, formatDateTime, formatDate, formatDuration, timeAgo
+  INTEREST_LABELS, OUTCOME_COLORS, OUTCOME_LABELS, formatDateTime, formatDate, formatDuration, timeAgo
 } from '../../utils/helpers';
 import LogCallModal from '../../components/LogCallModal';
 import AddNoteModal from '../../components/AddNoteModal';
@@ -1091,7 +1091,7 @@ function CallLogItemRedesigned({ log }) {
             </span>
             {/* Outcome */}
             <span className={`badge text-xs ${OUTCOME_COLORS[log.call_outcome] || 'bg-gray-100 text-gray-600'}`}>
-              {log.call_outcome?.replace(/_/g, ' ')}
+              {OUTCOME_LABELS[log.call_outcome] || log.call_outcome?.replace(/_/g, ' ')}
             </span>
           </div>
           <span className="text-xs text-gray-400 font-mono flex-shrink-0 bg-gray-50 px-2 py-1 rounded-lg">

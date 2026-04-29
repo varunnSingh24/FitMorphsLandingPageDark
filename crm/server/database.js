@@ -365,6 +365,35 @@ function initializeDatabase() {
     console.log('Migrated call_logs: added call_number, is_follow_up, follow_up_id');
   }
 
+  // Migration: add webinar_sent to call_logs CHECK constraint
+  const callLogsOutcomeSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='call_logs'").get();
+  if (callLogsOutcomeSchema && !callLogsOutcomeSchema.sql.includes('webinar_sent')) {
+    db.exec(`
+      DROP TABLE IF EXISTS call_logs_new;
+      CREATE TABLE call_logs_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL REFERENCES leads(id),
+        called_by INTEGER NOT NULL REFERENCES users(id),
+        call_type TEXT DEFAULT 'outbound' CHECK(call_type IN ('outbound','inbound')),
+        call_duration_seconds INTEGER DEFAULT 0,
+        call_outcome TEXT CHECK(call_outcome IN (
+          'no_answer','busy','callback_requested','interested','not_interested',
+          'converted','wrong_number','voicemail','webinar_sent'
+        )),
+        summary TEXT,
+        follow_up_date TEXT,
+        created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+        call_number INTEGER,
+        is_follow_up INTEGER DEFAULT 0,
+        follow_up_id INTEGER REFERENCES follow_ups(id)
+      );
+      INSERT INTO call_logs_new SELECT * FROM call_logs;
+      DROP TABLE call_logs;
+      ALTER TABLE call_logs_new RENAME TO call_logs;
+    `);
+    console.log('Migrated call_logs: added webinar_sent outcome');
+  }
+
   // Re-enable foreign key checks after migrations
   db.pragma('foreign_keys = ON');
 
