@@ -71,6 +71,19 @@ export const OUTCOME_COLORS = {
   callback_requested: 'bg-sky-100 text-sky-700',
   wrong_number: 'bg-red-100 text-red-600',
   voicemail: 'bg-gray-100 text-gray-600',
+  webinar_sent: 'bg-indigo-100 text-indigo-700',
+};
+
+export const OUTCOME_LABELS = {
+  interested: 'Interested',
+  converted: 'Converted',
+  not_interested: 'Not Interested',
+  no_answer: 'Call Not Picked',
+  busy: 'Busy',
+  callback_requested: 'Callback Requested',
+  wrong_number: 'Wrong Number',
+  voicemail: 'Voicemail',
+  webinar_sent: 'Webinar Sent',
 };
 
 export const SOURCE_LABELS = {

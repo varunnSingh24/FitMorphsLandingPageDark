@@ -81,6 +81,16 @@ export default function LeadList() {
     loadLeads();
   };
 
+  // Update status in-place — no reload, no re-sort
+  const handleStatusChange = async (leadId, newStatus) => {
+    try {
+      await api.put(`/leads/${leadId}/status`, { status: newStatus });
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    } catch (err) {
+      console.error('Status update failed', err);
+    }
+  };
+
   const toggleAll = () => setSelected(selected.length === leads.length ? [] : leads.map(l => l.id));
   const toggleOne = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
 
@@ -191,8 +201,18 @@ export default function LeadList() {
                   <td className="table-td" onClick={() => navigate(`/leads/${lead.id}`)}>
                     <span className="text-xs text-gray-600">{sources.find(s => s.key === lead.source)?.label || lead.source || '—'}</span>
                   </td>
-                  <td className="table-td" onClick={() => navigate(`/leads/${lead.id}`)}>
-                    <span className={`badge ${STATUS_COLORS[lead.status]}`}>{STATUS_LABELS[lead.status]}</span>
+                  <td className="table-td" onClick={e => e.stopPropagation()}>
+                    <select
+                      value={lead.status}
+                      onChange={e => handleStatusChange(lead.id, e.target.value)}
+                      className={`badge cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-sky-400 rounded-full pr-5 font-medium ${STATUS_COLORS[lead.status]}`}
+                      style={{ WebkitAppearance: 'auto' }}
+                      title="Change status"
+                    >
+                      {STATUSES.map(s => (
+                        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="table-td" onClick={() => navigate(`/leads/${lead.id}`)}>
                     <span className={`badge ${PRIORITY_COLORS[lead.priority]}`}>{lead.priority}</span>

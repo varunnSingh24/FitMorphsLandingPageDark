@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 
 const OUTCOMES = [
-  { value: 'interested', label: 'Interested' },
-  { value: 'not_interested', label: 'Not Interested' },
-  { value: 'callback_requested', label: 'Callback Requested' },
-  { value: 'converted', label: 'Converted' },
-  { value: 'no_answer', label: 'No Answer' },
-  { value: 'busy', label: 'Busy' },
-  { value: 'voicemail', label: 'Voicemail' },
-  { value: 'wrong_number', label: 'Wrong Number' },
+  { value: 'interested',        label: '✅ Interested' },
+  { value: 'callback_requested',label: '📅 Callback Requested' },
+  { value: 'converted',         label: '🎉 Converted' },
+  { value: 'webinar_sent',      label: '🎥 Webinar Sent' },
+  { value: 'no_answer',         label: '📵 Call Not Picked' },
+  { value: 'busy',              label: '🔴 Busy' },
+  { value: 'not_interested',    label: '❌ Not Interested' },
+  { value: 'voicemail',         label: '📬 Voicemail' },
+  { value: 'wrong_number',      label: '⚠️ Wrong Number' },
 ];
 
 export default function LogCallModal({ lead, onClose, onSuccess }) {
