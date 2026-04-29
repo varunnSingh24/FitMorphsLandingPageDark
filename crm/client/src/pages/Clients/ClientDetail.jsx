@@ -4,6 +4,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate, formatDateTime, timeAgo } from '../../utils/helpers';
 import ReminderModal from '../../components/ReminderModal';
+import WhatsAppBtn from '../../components/WhatsAppBtn';
 
 const STATUS_COLORS = {
   active: 'bg-green-100 text-green-700',
@@ -197,6 +198,7 @@ export default function ClientDetail() {
                 <span className="badge bg-indigo-50 text-indigo-700 capitalize">{(client.program_type || 'custom').replace(/_/g, ' ')}</span>
                 <span className="text-gray-300">|</span>
                 <a href={`tel:${client.phone}`} className="text-sm font-mono text-sky-600 hover:underline">{client.phone}</a>
+                <WhatsAppBtn phone={client.phone} leadName={client.full_name} agentName={user?.name} leadId={client.lead_id} size="xs" label="WhatsApp" />
                 {client.city && <span className="text-xs text-gray-400">📍 {client.city}</span>}
               </div>
               {client.dietitian_name && (
@@ -407,7 +409,12 @@ export default function ClientDetail() {
               👤 Contact Info
             </h2>
             <dl className="space-y-2.5 text-sm">
-              <InfoRow label="Phone" value={<a href={`tel:${client.phone}`} className="text-sky-600 font-mono hover:underline">{client.phone}</a>} />
+              <InfoRow label="Phone" value={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <a href={`tel:${client.phone}`} className="text-sky-600 font-mono hover:underline">{client.phone}</a>
+                  <WhatsAppBtn phone={client.phone} leadName={client.full_name} agentName={user?.name} leadId={client.lead_id} size="xs" showLabel={true} />
+                </div>
+              } />
               {client.email && <InfoRow label="Email" value={<a href={`mailto:${client.email}`} className="text-sky-600 hover:underline truncate">{client.email}</a>} />}
               {client.gender && <InfoRow label="Gender" value={<span className="capitalize">{client.gender}</span>} />}
               {client.age && <InfoRow label="Age" value={`${client.age} years`} />}

@@ -10,6 +10,7 @@ import LogCallModal from '../../components/LogCallModal';
 import AddNoteModal from '../../components/AddNoteModal';
 import ScheduleFollowUpModal from '../../components/ScheduleFollowUpModal';
 import ReminderModal from '../../components/ReminderModal';
+import WhatsAppBtn from '../../components/WhatsAppBtn';
 
 const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
 const PIPELINE = ['new','contacted','interested','follow_up','negotiation','converted'];
@@ -193,6 +194,7 @@ export default function LeadDetail() {
                 {lead.interested_in && <span className="badge bg-indigo-50 text-indigo-700">{INTEREST_LABELS[lead.interested_in]}</span>}
                 <span className="text-gray-300 hidden sm:inline">|</span>
                 <a href={`tel:${lead.phone}`} className="text-sm font-mono text-sky-600 hover:underline">{lead.phone}</a>
+                <WhatsAppBtn phone={lead.phone} leadName={lead.full_name} agentName={user?.name} leadId={lead.id} size="xs" label="WhatsApp" />
                 {lead.city && <span className="text-xs text-gray-400">📍 {lead.city}</span>}
               </div>
             </div>
@@ -292,8 +294,20 @@ export default function LeadDetail() {
               <EditForm form={editForm} setForm={setEditForm} onSave={handleSaveEdit} onCancel={() => setEditing(false)} sources={sources}/>
             ) : (
               <dl className="space-y-2.5">
-                <InfoRow icon="📞" label="Phone" value={<a href={`tel:${lead.phone}`} className="text-sky-600 font-mono hover:underline">{lead.phone}</a>}/>
-                {lead.secondary_phone && <InfoRow icon="📱" label="Alt Phone" value={<span className="font-mono">{lead.secondary_phone}</span>}/>}
+                <InfoRow icon="📞" label="Phone" value={
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <a href={`tel:${lead.phone}`} className="text-sky-600 font-mono hover:underline">{lead.phone}</a>
+                    <WhatsAppBtn phone={lead.phone} leadName={lead.full_name} agentName={user?.name} leadId={lead.id} size="xs" showLabel={true} />
+                  </div>
+                }/>
+                {lead.secondary_phone && (
+                  <InfoRow icon="📱" label="Alt Phone" value={
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono">{lead.secondary_phone}</span>
+                      <WhatsAppBtn phone={lead.secondary_phone} leadName={lead.full_name} agentName={user?.name} leadId={lead.id} size="xs" showLabel={false} />
+                    </div>
+                  }/>
+                )}
                 {lead.email && <InfoRow icon="📧" label="Email" value={<a href={`mailto:${lead.email}`} className="text-sky-600 truncate hover:underline">{lead.email}</a>}/>}
                 <div className="border-t border-gray-100 pt-2.5 space-y-2.5">
                   {lead.gender && <InfoRow icon="👤" label="Gender" value={<span className="capitalize">{lead.gender}</span>}/>}

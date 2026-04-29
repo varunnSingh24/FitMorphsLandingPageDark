@@ -4,6 +4,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, timeAgo } from '../../utils/helpers';
 import LogCallModal from '../../components/LogCallModal';
+import WhatsAppBtn, { waLink } from '../../components/WhatsAppBtn';
 
 const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
 const PRIORITIES = ['hot','warm','cold'];
@@ -181,7 +182,12 @@ export default function LeadList() {
                     <div className="font-medium text-gray-900">{lead.full_name}</div>
                     {lead.email && <div className="text-xs text-gray-400 truncate max-w-xs">{lead.email}</div>}
                   </td>
-                  <td className="table-td font-mono text-xs" onClick={() => navigate(`/leads/${lead.id}`)}>{lead.phone}</td>
+                  <td className="table-td text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-gray-700">{lead.phone}</span>
+                      <WhatsAppBtn phone={lead.phone} leadName={lead.full_name} leadId={lead.id} size="xs" showLabel={false} />
+                    </div>
+                  </td>
                   <td className="table-td" onClick={() => navigate(`/leads/${lead.id}`)}>
                     <span className="text-xs text-gray-600">{sources.find(s => s.key === lead.source)?.label || lead.source || '—'}</span>
                   </td>
