@@ -96,7 +96,8 @@ export default function Chat() {
   useEffect(() => {
     socket.on('new_message', (msg) => {
       if (activeRoom && msg.room_id === activeRoom.id) {
-        setMessages(prev => [...prev, msg]);
+        // Dedupe: socket may re-broadcast a message we already added via REST fallback
+        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         // Mark as read
         socket.emit('mark_read', { room_id: msg.room_id });
         api.put(`/chat/rooms/${msg.room_id}/read`).catch(() => {});
@@ -150,8 +151,8 @@ export default function Chat() {
       // REST fallback (works even without WebSocket proxy)
       try {
         const r = await api.post(`/chat/rooms/${activeRoom.id}/messages`, { message: msg });
-        // Socket didn't echo back to us, so add locally
-        setMessages(prev => [...prev, r.data.message]);
+        // Dedupe: if socket reconnects and echoes the same id, the new_message handler will skip it
+        setMessages(prev => prev.some(m => m.id === r.data.message.id) ? prev : [...prev, r.data.message]);
         setRooms(prev => prev.map(room =>
           room.id === activeRoom.id
             ? { ...room, last_message: msg, last_message_at: r.data.message.created_at }

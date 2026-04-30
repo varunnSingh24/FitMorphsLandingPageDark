@@ -4,7 +4,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import {
   STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, SOURCE_LABELS,
-  INTEREST_LABELS, OUTCOME_COLORS, OUTCOME_LABELS, formatDateTime, formatDate, formatDuration, timeAgo
+  INTEREST_LABELS, OUTCOME_COLORS, OUTCOME_LABELS, formatDateTime, formatDate, formatDuration, timeAgo, istToday
 } from '../../utils/helpers';
 import LogCallModal from '../../components/LogCallModal';
 import AddNoteModal from '../../components/AddNoteModal';
@@ -66,7 +66,7 @@ export default function LeadDetail() {
   const [editMedical, setEditMedical] = useState(false);
   const [showConvert, setShowConvert] = useState(false);
   const [convertForm, setConvertForm] = useState({
-    dietitian_id: '', program_type: '', start_date: new Date().toISOString().split('T')[0],
+    dietitian_id: '', program_type: '', start_date: istToday(),
     end_date: '', target_weight_kg: '', notes: '',
   });
   const [converting, setConverting] = useState(false);

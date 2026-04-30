@@ -60,6 +60,15 @@ export default function Layout() {
         const d = parseUTCDate(r.due_at);
         return d && d <= now;
       });
+      const dueIds = new Set(dueNow.map(r => r.id));
+
+      // Prune: drop any "seen" ids that are no longer in the due-now set.
+      // This is what re-arms a popup after the user snoozes — once the snooze pushes
+      // due_at into the future, the id leaves dueNow, leaves shownPopupIds, and the next
+      // time it becomes due it qualifies as newly-due again.
+      shownPopupIds.current.forEach(id => {
+        if (!dueIds.has(id)) shownPopupIds.current.delete(id);
+      });
 
       if (isInitialLoad.current) {
         // On first load: silently mark all already-overdue as seen (no popup flood)

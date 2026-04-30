@@ -207,16 +207,35 @@ router.post('/:id/checkins', (req, res) => {
 // DELETE /api/clients/:id (admin only)
 router.delete('/:id', requireRole('admin', 'manager'), (req, res) => {
   const db = getDb();
-  const client = db.prepare('SELECT id FROM clients WHERE id = ?').get(req.params.id);
+  const client = db.prepare('SELECT id, lead_id FROM clients WHERE id = ?').get(req.params.id);
   if (!client) return res.status(404).json({ error: 'Client not found' });
 
-  db.transaction(() => {
-    db.prepare('DELETE FROM checkins WHERE client_id = ?').run(client.id);
-    db.prepare("DELETE FROM reminders WHERE ref_type = 'client' AND ref_id = ?").run(client.id);
-    db.prepare('DELETE FROM clients WHERE id = ?').run(client.id);
-  })();
+  const now = istNow();
 
-  res.json({ success: true });
+  try {
+    db.transaction(() => {
+      // Drop every child table that references this client
+      db.prepare('DELETE FROM checkins      WHERE client_id = ?').run(client.id);
+      db.prepare('DELETE FROM bsl_readings  WHERE client_id = ?').run(client.id);
+      db.prepare('DELETE FROM hba1c_records WHERE client_id = ?').run(client.id);
+      db.prepare('DELETE FROM measurements  WHERE client_id = ?').run(client.id);
+      db.prepare("DELETE FROM reminders WHERE ref_type = 'client' AND ref_id = ?").run(client.id);
+      db.prepare('DELETE FROM clients WHERE id = ?').run(client.id);
+
+      // Revert the lead's converted status so it can be processed again
+      if (client.lead_id) {
+        db.prepare("UPDATE leads SET status = 'interested', updated_at = ? WHERE id = ? AND status = 'converted'")
+          .run(now, client.lead_id);
+        db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'status_change', ?, ?)`)
+          .run(client.lead_id, req.user.id, `Client deleted — lead reverted to interested`, now);
+      }
+    })();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[DELETE /clients/:id] failed:', err);
+    res.status(500).json({ error: 'Failed to delete client', detail: err.message });
+  }
 });
 
 module.exports = router;

@@ -6,6 +6,16 @@ const { istNow } = require('../utils/time');
 const router = express.Router();
 router.use(authenticate);
 
+// Helper — 403 if a sales_agent / dietician tries to touch a lead they don't own
+function assertLeadAccess(db, leadId, user) {
+  const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(leadId);
+  if (!lead) return { error: 'Lead not found', status: 404 };
+  if (['sales_agent', 'dietician'].includes(user.role) && lead.assigned_to !== user.id) {
+    return { error: 'Access denied', status: 403 };
+  }
+  return { lead };
+}
+
 // POST /api/call-logs
 router.post('/', (req, res) => {
   const db = getDb();
@@ -17,66 +27,82 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'lead_id and call_outcome required' });
   }
 
-  const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(lead_id);
-  if (!lead) return res.status(404).json({ error: 'Lead not found' });
+  const check = assertLeadAccess(db, lead_id, req.user);
+  if (check.error) return res.status(check.status).json({ error: check.error });
+  const lead = check.lead;
 
   const now = istNow();
 
-  // Auto-compute call_number for this lead
-  const maxRow = db.prepare('SELECT COALESCE(MAX(call_number), 0) as max_num FROM call_logs WHERE lead_id = ?').get(lead_id);
-  const call_number = maxRow.max_num + 1;
+  try {
+    // Wrap all writes in a single atomic transaction
+    const txn = db.transaction(() => {
+      // Auto-compute call_number for this lead
+      const maxRow = db.prepare('SELECT COALESCE(MAX(call_number), 0) as max_num FROM call_logs WHERE lead_id = ?').get(lead_id);
+      const call_number = maxRow.max_num + 1;
 
-  // Create call log
-  const result = db.prepare(`
-    INSERT INTO call_logs (lead_id, called_by, call_type, call_duration_seconds,
-      call_outcome, summary, follow_up_date, call_number, is_follow_up, follow_up_id, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(lead_id, req.user.id, call_type, call_duration_seconds, call_outcome,
-    summary || null, follow_up_date || null, call_number, is_follow_up ? 1 : 0,
-    follow_up_id || null, now);
+      // Create call log
+      const result = db.prepare(`
+        INSERT INTO call_logs (lead_id, called_by, call_type, call_duration_seconds,
+          call_outcome, summary, follow_up_date, call_number, is_follow_up, follow_up_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(lead_id, req.user.id, call_type, call_duration_seconds, call_outcome,
+        summary || null, follow_up_date || null, call_number, is_follow_up ? 1 : 0,
+        follow_up_id || null, now);
 
-  // Create activity
-  const durationStr = formatDuration(call_duration_seconds);
-  const callLabel = is_follow_up ? 'Follow-up call' : 'Call';
-  db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'call', ?, ?)`)
-    .run(lead_id, req.user.id, `${callLabel} #${call_number} — ${call_type === 'inbound' ? 'Inbound' : 'Outbound'} (${durationStr}) — ${call_outcome}. ${summary || ''}`, now);
+      // Create activity
+      const durationStr = formatDuration(call_duration_seconds);
+      const callLabel = is_follow_up ? 'Follow-up call' : 'Call';
+      db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'call', ?, ?)`)
+        .run(lead_id, req.user.id, `${callLabel} #${call_number} — ${call_type === 'inbound' ? 'Inbound' : 'Outbound'} (${durationStr}) — ${call_outcome}. ${summary || ''}`, now);
 
-  // Auto-complete linked follow-up
-  if (follow_up_id) {
-    db.prepare('UPDATE follow_ups SET is_completed = 1, completed_at = ? WHERE id = ?').run(now, follow_up_id);
+      // Auto-complete linked follow-up
+      if (follow_up_id) {
+        db.prepare('UPDATE follow_ups SET is_completed = 1, completed_at = ? WHERE id = ?').run(now, follow_up_id);
+      }
+
+      // Auto-update lead status
+      let newStatus = lead.status;
+      if (call_outcome === 'converted') newStatus = 'converted';
+      else if (call_outcome === 'not_interested') newStatus = 'lost';
+      else if (call_outcome === 'wrong_number') newStatus = 'junk';
+      else if (call_outcome === 'interested') newStatus = 'interested';
+      else if (['no_answer', 'busy', 'voicemail'].includes(call_outcome) && lead.status === 'new') newStatus = 'contacted';
+      else if (call_outcome === 'callback_requested') newStatus = 'follow_up';
+
+      if (newStatus !== lead.status) {
+        db.prepare('UPDATE leads SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, now, lead_id);
+        db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'status_change', ?, ?)`)
+          .run(lead_id, req.user.id, `Status auto-updated: ${lead.status} → ${newStatus}`, now);
+      } else {
+        db.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').run(now, lead_id);
+      }
+
+      // Create follow-up if follow_up_date provided
+      if (follow_up_date) {
+        db.prepare(`
+          INSERT INTO follow_ups (lead_id, assigned_to, follow_up_date, note, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(lead_id, req.user.id, follow_up_date, `Follow-up from call #${call_number}: ${summary || call_outcome}`, now);
+      }
+
+      return { id: result.lastInsertRowid, call_number };
+    });
+
+    const { id, call_number } = txn();
+    res.status(201).json({ id, call_number, success: true });
+  } catch (err) {
+    console.error('[callLogs.POST] failed:', err);
+    res.status(500).json({ error: 'Failed to log call' });
   }
-
-  // Auto-update lead status
-  let newStatus = lead.status;
-  if (call_outcome === 'converted') newStatus = 'converted';
-  else if (call_outcome === 'not_interested') newStatus = 'lost';
-  else if (call_outcome === 'wrong_number') newStatus = 'junk';
-  else if (call_outcome === 'interested') newStatus = 'interested';
-  else if (['no_answer', 'busy', 'voicemail'].includes(call_outcome) && lead.status === 'new') newStatus = 'contacted';
-  else if (call_outcome === 'callback_requested') newStatus = 'follow_up';
-
-  if (newStatus !== lead.status) {
-    db.prepare('UPDATE leads SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, now, lead_id);
-    db.prepare(`INSERT INTO activities (lead_id, user_id, activity_type, description, created_at) VALUES (?, ?, 'status_change', ?, ?)`)
-      .run(lead_id, req.user.id, `Status auto-updated: ${lead.status} → ${newStatus}`, now);
-  } else {
-    db.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').run(now, lead_id);
-  }
-
-  // Create follow-up if follow_up_date provided
-  if (follow_up_date) {
-    db.prepare(`
-      INSERT INTO follow_ups (lead_id, assigned_to, follow_up_date, note, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(lead_id, req.user.id, follow_up_date, `Follow-up from call #${call_number}: ${summary || call_outcome}`, now);
-  }
-
-  res.status(201).json({ id: result.lastInsertRowid, call_number, success: true });
 });
 
 // GET /api/call-logs/lead/:leadId
 router.get('/lead/:leadId', (req, res) => {
   const db = getDb();
+
+  const check = assertLeadAccess(db, req.params.leadId, req.user);
+  if (check.error) return res.status(check.status).json({ error: check.error });
+
   const callLogs = db.prepare(`
     SELECT cl.*, u.name as caller_name,
            fu.follow_up_date as linked_follow_up_date,

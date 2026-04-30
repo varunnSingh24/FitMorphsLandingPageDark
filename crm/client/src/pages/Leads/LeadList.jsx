@@ -82,12 +82,22 @@ export default function LeadList() {
   };
 
   // Update status in-place — no reload, no re-sort
+  // Optimistic update with revert on API failure so UI never lies about saved state
   const handleStatusChange = async (leadId, newStatus) => {
+    const prev = leads.find(l => l.id === leadId);
+    if (!prev || prev.status === newStatus) return;
+    const oldStatus = prev.status;
+
+    // Optimistic update
+    setLeads(curr => curr.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+
     try {
       await api.put(`/leads/${leadId}/status`, { status: newStatus });
-      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
     } catch (err) {
       console.error('Status update failed', err);
+      // Revert on failure so UI matches server truth
+      setLeads(curr => curr.map(l => l.id === leadId ? { ...l, status: oldStatus } : l));
+      alert(err.response?.data?.error || 'Failed to update status. Please try again.');
     }
   };
 

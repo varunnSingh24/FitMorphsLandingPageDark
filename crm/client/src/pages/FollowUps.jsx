@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
-import { formatDate, STATUS_COLORS, STATUS_LABELS } from '../utils/helpers';
+import { formatDate, STATUS_COLORS, STATUS_LABELS, istToday } from '../utils/helpers';
 import LogCallModal from '../components/LogCallModal';
 
 const FILTERS = [
@@ -17,7 +17,7 @@ export default function FollowUps() {
   const [loading, setLoading] = useState(true);
   const [callLead, setCallLead] = useState(null);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
 
   const load = async () => {
     setLoading(true);

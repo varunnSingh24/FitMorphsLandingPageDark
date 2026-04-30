@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import api from '../utils/api';
+import { istToday } from '../utils/helpers';
 
 const TIME_PRESETS = ['08:00','09:30','11:00','12:00','14:00','16:00','18:00','20:00'];
 
 export default function ReminderModal({ onClose, onSaved, refType, refId, refName, defaultTitle = '' }) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
 
   const [form, setForm] = useState({
     title: defaultTitle,

@@ -6,9 +6,23 @@ const { istNow } = require('../utils/time');
 const router = express.Router();
 router.use(authenticate);
 
+// Helper — 403 if a sales_agent / dietician tries to touch a lead they don't own
+function assertLeadAccess(db, leadId, user) {
+  const lead = db.prepare('SELECT id, assigned_to FROM leads WHERE id = ?').get(leadId);
+  if (!lead) return { error: 'Lead not found', status: 404 };
+  if (['sales_agent', 'dietician'].includes(user.role) && lead.assigned_to !== user.id) {
+    return { error: 'Access denied', status: 403 };
+  }
+  return { lead };
+}
+
 // GET /api/activities/lead/:leadId
 router.get('/lead/:leadId', (req, res) => {
   const db = getDb();
+
+  const check = assertLeadAccess(db, req.params.leadId, req.user);
+  if (check.error) return res.status(check.status).json({ error: check.error });
+
   const activities = db.prepare(`
     SELECT a.*, u.name as user_name
     FROM activities a
@@ -28,6 +42,9 @@ router.post('/', (req, res) => {
   if (!lead_id || !description) {
     return res.status(400).json({ error: 'lead_id and description required' });
   }
+
+  const check = assertLeadAccess(db, lead_id, req.user);
+  if (check.error) return res.status(check.status).json({ error: check.error });
 
   const now = istNow();
   const result = db.prepare(`
