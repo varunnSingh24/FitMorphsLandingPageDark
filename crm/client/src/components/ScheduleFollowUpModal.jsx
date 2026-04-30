@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import api from '../utils/api';
 import { ModalWrapper } from './LogCallModal';
+import { istToday } from '../utils/helpers';
 
 export default function ScheduleFollowUpModal({ lead, onClose, onSuccess }) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
   const [form, setForm] = useState({ follow_up_date: today, follow_up_time: '', note: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

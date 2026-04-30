@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-import { formatDate, formatDateTime, timeAgo } from '../../utils/helpers';
+import { formatDate, formatDateTime, timeAgo, istToday } from '../../utils/helpers';
 import ReminderModal from '../../components/ReminderModal';
 import WhatsAppBtn from '../../components/WhatsAppBtn';
 
@@ -872,7 +872,7 @@ function groupByMonth(readings) {
 
 function BSLTab({ clientId, bslData, onRefresh }) {
   const { readings, hba1c } = bslData;
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
 
   const [form, setForm] = useState({
     reading_date: today, fasting_bsl: '', pp_bsl: '', random_bsl: '', comment: '',
@@ -1295,7 +1295,7 @@ function groupMeasurementsByMonth(measurements) {
 
 function MeasurementsTab({ clientId, data, onRefresh, clientGender }) {
   const { measurements } = data;
-  const today = new Date().toISOString().split('T')[0];
+  const today = istToday();
   const gender = clientGender || 'female';
 
   const [form, setForm] = useState({

@@ -13,7 +13,9 @@ client/dist/
 
 # Env files
 .env
+.env.local
 server/.env
+../.env.local
 
 # OS
 .DS_Store

@@ -7,6 +7,13 @@ function parseIST(dateStr) {
   return new Date(iso.includes('+') ? iso : iso + '+05:30');
 }
 
+// Today's date in IST as 'YYYY-MM-DD'.
+// `new Date().toISOString()` is UTC, which is wrong before 5:30am IST → off-by-one day.
+export function istToday() {
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  return new Date(Date.now() + IST_OFFSET_MS).toISOString().split('T')[0];
+}
+
 // Format datetime to IST display
 export function formatDateTime(dateStr) {
   if (!dateStr) return '—';
