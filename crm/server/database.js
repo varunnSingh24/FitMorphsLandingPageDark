@@ -365,9 +365,9 @@ function initializeDatabase() {
     console.log('Migrated call_logs: added call_number, is_follow_up, follow_up_id');
   }
 
-  // Migration: add webinar_sent to call_logs CHECK constraint
+  // Migration: add webinar_sent + call_done to call_logs CHECK constraint
   const callLogsOutcomeSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='call_logs'").get();
-  if (callLogsOutcomeSchema && !callLogsOutcomeSchema.sql.includes('webinar_sent')) {
+  if (callLogsOutcomeSchema && (!callLogsOutcomeSchema.sql.includes('webinar_sent') || !callLogsOutcomeSchema.sql.includes('call_done'))) {
     db.exec(`
       DROP TABLE IF EXISTS call_logs_new;
       CREATE TABLE call_logs_new (
@@ -378,7 +378,7 @@ function initializeDatabase() {
         call_duration_seconds INTEGER DEFAULT 0,
         call_outcome TEXT CHECK(call_outcome IN (
           'no_answer','busy','callback_requested','interested','not_interested',
-          'converted','wrong_number','voicemail','webinar_sent'
+          'converted','wrong_number','voicemail','webinar_sent','call_done'
         )),
         summary TEXT,
         follow_up_date TEXT,
@@ -391,7 +391,7 @@ function initializeDatabase() {
       DROP TABLE call_logs;
       ALTER TABLE call_logs_new RENAME TO call_logs;
     `);
-    console.log('Migrated call_logs: added webinar_sent outcome');
+    console.log('Migrated call_logs: added webinar_sent + call_done outcome');
   }
 
   // Re-enable foreign key checks after migrations
