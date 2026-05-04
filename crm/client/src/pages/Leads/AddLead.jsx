@@ -52,6 +52,7 @@ export default function AddLead() {
   const [sources, setSources] = useState(DEFAULT_SOURCES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [duplicate, setDuplicate] = useState(null);
   const [showMedical, setShowMedical] = useState(false);
 
   const [form, setForm] = useState({
@@ -113,7 +114,18 @@ export default function AddLead() {
 
       navigate(`/leads/${leadId}`);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create lead');
+      // 409 = duplicate phone — surface a link to the existing lead
+      if (err.response?.status === 409 && err.response.data?.existing) {
+        const existing = err.response.data.existing;
+        setError(
+          `${err.response.data.error}. ` +
+          `Click "View existing lead" below to open it instead.`
+        );
+        // Stash existing lead id so the UI can render a CTA
+        setDuplicate(existing);
+      } else {
+        setError(err.response?.data?.error || 'Failed to create lead');
+      }
     } finally {
       setLoading(false);
     }
@@ -136,8 +148,17 @@ export default function AddLead() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-5 flex items-center gap-2">
-          ⚠️ {error}
+        <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
+          <div className="flex items-center gap-2">⚠️ {error}</div>
+          {duplicate && (
+            <button
+              type="button"
+              onClick={() => navigate(`/leads/${duplicate.id}`)}
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 underline hover:text-red-800"
+            >
+              View existing lead → {duplicate.full_name}
+            </button>
+          )}
         </div>
       )}
 

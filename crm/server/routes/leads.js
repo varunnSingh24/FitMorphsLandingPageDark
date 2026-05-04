@@ -2,9 +2,12 @@ const express = require('express');
 const { getDb } = require('../database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { istNow } = require('../utils/time');
+const { normalizePhone } = require('../utils/phone');
 
 const router = express.Router();
 router.use(authenticate);
+
+const VALID_STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
 
 // GET /api/leads
 router.get('/', (req, res) => {
@@ -29,8 +32,16 @@ router.get('/', (req, res) => {
   if (date_from) { conditions.push(`date(l.created_at) >= ?`); params.push(date_from); }
   if (date_to) { conditions.push(`date(l.created_at) <= ?`); params.push(date_to); }
   if (search) {
-    conditions.push('(l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    // Match name / email / phone / secondary_phone. For phones we also match
+    // the digits-only normalized form so "+91 98765 43210" finds "9876543210".
+    const digits = String(search).replace(/\D/g, '');
+    conditions.push(
+      '(l.full_name LIKE ? OR l.email LIKE ? OR l.phone LIKE ? OR l.secondary_phone LIKE ?'
+      + (digits ? ' OR l.phone LIKE ? OR l.secondary_phone LIKE ?' : '')
+      + ')'
+    );
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    if (digits) params.push(`%${digits}%`, `%${digits}%`);
   }
 
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
@@ -59,13 +70,47 @@ router.post('/', (req, res) => {
   if (!full_name || !phone) {
     return res.status(400).json({ error: 'Name and phone are required' });
   }
+  if (!VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Invalid status: ${status}` });
+  }
+  // Block creating a lead directly in 'converted' state — there'd be no client record.
+  if (status === 'converted') {
+    return res.status(400).json({ error: 'Cannot create a lead in "converted" state. Create the lead first, then use the convert flow.' });
+  }
+
+  // Normalize phones so different formats of the same number collapse and dedupe correctly
+  const normalizedPhone = normalizePhone(phone);
+  const normalizedSecondary = secondary_phone ? normalizePhone(secondary_phone) : null;
+  if (!normalizedPhone) {
+    return res.status(400).json({ error: 'Invalid phone number' });
+  }
+
+  // Duplicate check — both primary and secondary phone, against either column
+  const dup = db.prepare(`
+    SELECT id, full_name, phone, status, assigned_to,
+           (SELECT name FROM users WHERE id = leads.assigned_to) as assigned_name
+    FROM leads
+    WHERE phone = ? OR phone = ? OR secondary_phone = ? OR secondary_phone = ?
+    LIMIT 1
+  `).get(
+    normalizedPhone,
+    normalizedSecondary || '__none__',
+    normalizedPhone,
+    normalizedSecondary || '__none__'
+  );
+  if (dup) {
+    return res.status(409).json({
+      error: `Lead with this phone already exists: ${dup.full_name}${dup.assigned_name ? ' (assigned to ' + dup.assigned_name + ')' : ''}`,
+      existing: dup,
+    });
+  }
 
   const now = istNow();
   const result = db.prepare(`
     INSERT INTO leads (full_name, email, phone, secondary_phone, gender, age, source, source_detail,
       status, assigned_to, priority, interested_in, notes, city, locality, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(full_name, email || null, phone, secondary_phone || null, gender || null, age || null,
+  `).run(full_name, email || null, normalizedPhone, normalizedSecondary, gender || null, age || null,
     source || null, source_detail || null, status,
     assigned_to || req.user.id, priority, interested_in || null, notes || null,
     city || null, locality || null, now, now);
@@ -113,13 +158,28 @@ router.put('/:id', (req, res) => {
   const { full_name, email, phone, secondary_phone, gender, age, source, source_detail,
     priority, interested_in, notes, city, locality } = req.body;
 
+  // Normalize phones if provided so updates stay in canonical form
+  const newPhone = phone ? normalizePhone(phone) : lead.phone;
+  if (phone && !newPhone) return res.status(400).json({ error: 'Invalid phone number' });
+  const newSecondary = secondary_phone === undefined
+    ? lead.secondary_phone
+    : (secondary_phone ? normalizePhone(secondary_phone) : null);
+
+  // Reject if new phone collides with another lead
+  if (phone && newPhone !== lead.phone) {
+    const collision = db.prepare('SELECT id, full_name FROM leads WHERE phone = ? AND id != ?').get(newPhone, lead.id);
+    if (collision) {
+      return res.status(409).json({ error: `Another lead already has this phone: ${collision.full_name}` });
+    }
+  }
+
   const now = istNow();
   db.prepare(`
     UPDATE leads SET full_name=?, email=?, phone=?, secondary_phone=?, gender=?, age=?,
       source=?, source_detail=?, priority=?, interested_in=?, notes=?, city=?, locality=?, updated_at=?
     WHERE id=?
-  `).run(full_name || lead.full_name, email ?? lead.email, phone || lead.phone,
-    secondary_phone ?? lead.secondary_phone, gender ?? lead.gender, age ?? lead.age,
+  `).run(full_name || lead.full_name, email ?? lead.email, newPhone,
+    newSecondary, gender ?? lead.gender, age ?? lead.age,
     source ?? lead.source, source_detail ?? lead.source_detail,
     priority || lead.priority, interested_in ?? lead.interested_in,
     notes ?? lead.notes, city ?? lead.city, locality ?? lead.locality, now, lead.id);
@@ -137,11 +197,27 @@ router.put('/:id/status', (req, res) => {
   const { status } = req.body;
 
   if (!status) return res.status(400).json({ error: 'Status required' });
+  if (!VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Invalid status: ${status}` });
+  }
 
   const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Lead not found' });
   if (['sales_agent','dietician'].includes(role) && lead.assigned_to !== userId) {
     return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Don't let inline status edits jump straight to 'converted' without creating
+  // the client record. Force users through the convert flow (POST /clients).
+  // Allow it only when a client record already exists (e.g. legacy fixup).
+  if (status === 'converted' && lead.status !== 'converted') {
+    const client = db.prepare('SELECT id FROM clients WHERE lead_id = ?').get(lead.id);
+    if (!client) {
+      return res.status(400).json({
+        error: 'Use the "Convert to Client" flow to mark as converted — this creates the client record automatically.',
+        code: 'NEEDS_CLIENT_CONVERSION',
+      });
+    }
   }
 
   const now = istNow();

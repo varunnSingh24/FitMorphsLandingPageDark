@@ -117,8 +117,20 @@ export default function LeadDetail() {
 
   const handleStatusChange = async (status) => {
     setSavingStatus(true);
-    try { await api.put(`/leads/${id}/status`, { status }); load(); }
-    finally { setSavingStatus(false); }
+    try {
+      await api.put(`/leads/${id}/status`, { status });
+      load();
+    } catch (err) {
+      // Server tells us to use the convert flow when moving to 'converted'
+      if (err.response?.data?.code === 'NEEDS_CLIENT_CONVERSION') {
+        alert(err.response.data.error);
+        setShowConvert(true);
+      } else {
+        alert(err.response?.data?.error || 'Failed to update status');
+      }
+    } finally {
+      setSavingStatus(false);
+    }
   };
 
   const handleAssign = async (assigned_to) => {
