@@ -70,6 +70,7 @@ export const PRIORITY_COLORS = {
 };
 
 export const OUTCOME_COLORS = {
+  call_done: 'bg-blue-100 text-blue-700',
   interested: 'bg-purple-100 text-purple-700',
   converted: 'bg-green-100 text-green-700',
   not_interested: 'bg-red-100 text-red-700',
@@ -82,6 +83,7 @@ export const OUTCOME_COLORS = {
 };
 
 export const OUTCOME_LABELS = {
+  call_done: 'Call Done',
   interested: 'Interested',
   converted: 'Converted',
   not_interested: 'Not Interested',

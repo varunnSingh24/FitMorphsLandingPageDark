@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 
 const OUTCOMES = [
+  { value: 'call_done',         label: '📞 Call Done' },
   { value: 'interested',        label: '✅ Interested' },
   { value: 'callback_requested',label: '📅 Callback Requested' },
   { value: 'converted',         label: '🎉 Converted' },
