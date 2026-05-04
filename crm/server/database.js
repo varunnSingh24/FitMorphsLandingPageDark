@@ -394,6 +394,30 @@ function initializeDatabase() {
     console.log('Migrated call_logs: added webinar_sent + call_done outcome');
   }
 
+  // Migration: normalize existing lead phones (one-shot, idempotent)
+  // Strips non-digits, removes leading "91" country code or trunk "0".
+  // Only runs once — flagged via the settings table.
+  const phoneMigrationFlag = db.prepare("SELECT value FROM settings WHERE key = 'phones_normalized_v1'").get();
+  if (!phoneMigrationFlag) {
+    const { normalizePhone } = require('./utils/phone');
+    const allLeads = db.prepare('SELECT id, phone, secondary_phone FROM leads').all();
+    const upd = db.prepare('UPDATE leads SET phone = ?, secondary_phone = ? WHERE id = ?');
+    let touched = 0;
+    db.transaction(() => {
+      for (const l of allLeads) {
+        const newPhone = normalizePhone(l.phone);
+        const newSecondary = l.secondary_phone ? normalizePhone(l.secondary_phone) : null;
+        if (newPhone !== l.phone || newSecondary !== l.secondary_phone) {
+          upd.run(newPhone, newSecondary, l.id);
+          touched++;
+        }
+      }
+    })();
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('phones_normalized_v1', ?)")
+      .run(new Date().toISOString());
+    if (touched > 0) console.log(`Migrated ${touched} lead phone numbers to normalized form`);
+  }
+
   // Re-enable foreign key checks after migrations
   db.pragma('foreign_keys = ON');
 

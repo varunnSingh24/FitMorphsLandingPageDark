@@ -1,6 +1,13 @@
 const jwt = require('jsonwebtoken');
 const { getDb } = require('../database');
 
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET env var must be set in production');
+  }
+  // eslint-disable-next-line no-console
+  console.warn('[auth] JWT_SECRET not set — falling back to dev default. NEVER use this in production.');
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'fitmorphs_crm_secret_2024';
 
 function authenticate(req, res, next) {

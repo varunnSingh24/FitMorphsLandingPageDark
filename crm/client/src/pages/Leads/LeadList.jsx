@@ -88,6 +88,16 @@ export default function LeadList() {
     if (!prev || prev.status === newStatus) return;
     const oldStatus = prev.status;
 
+    // Direct conversion isn't allowed via the inline dropdown — must go through
+    // the convert flow on the lead detail page so a client record is created.
+    if (newStatus === 'converted') {
+      const ok = window.confirm(
+        `To mark "${prev.full_name}" as converted, you need to create a client record. Open the lead and use "Convert to Client"?`
+      );
+      if (ok) navigate(`/leads/${leadId}`);
+      return;
+    }
+
     // Optimistic update
     setLeads(curr => curr.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
 
@@ -97,7 +107,14 @@ export default function LeadList() {
       console.error('Status update failed', err);
       // Revert on failure so UI matches server truth
       setLeads(curr => curr.map(l => l.id === leadId ? { ...l, status: oldStatus } : l));
-      alert(err.response?.data?.error || 'Failed to update status. Please try again.');
+      // Special case: server told us to use the convert flow
+      if (err.response?.data?.code === 'NEEDS_CLIENT_CONVERSION') {
+        if (window.confirm('This requires the convert flow. Open the lead now?')) {
+          navigate(`/leads/${leadId}`);
+        }
+      } else {
+        alert(err.response?.data?.error || 'Failed to update status. Please try again.');
+      }
     }
   };
 

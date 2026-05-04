@@ -149,14 +149,29 @@ router.put('/:id', requireRole('admin'), (req, res) => {
 });
 
 // DELETE /api/users/:id (admin only, cannot delete self)
+// Soft-delete: deactivates the account so the user can no longer log in,
+// but preserves all FK references (assigned leads, call logs, activities).
+// Hard delete would either crash on FK enforcement or orphan history.
 router.delete('/:id', requireRole('admin'), (req, res) => {
   const db = getDb();
   const targetId = parseInt(req.params.id);
-  if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot delete your own account' });
-  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(targetId);
+  if (targetId === req.user.id) return res.status(400).json({ error: 'Cannot deactivate your own account' });
+  const user = db.prepare('SELECT id, is_active FROM users WHERE id = ?').get(targetId);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
-  res.json({ success: true });
+  if (!user.is_active) return res.json({ success: true, alreadyInactive: true });
+
+  // Count what they own — useful for the UI to show a warning
+  const activeLeads = db.prepare("SELECT COUNT(*) as c FROM leads WHERE assigned_to = ? AND status NOT IN ('converted','lost','junk')").get(targetId).c;
+  const pendingFollowUps = db.prepare("SELECT COUNT(*) as c FROM follow_ups WHERE assigned_to = ? AND is_completed = 0").get(targetId).c;
+
+  db.prepare('UPDATE users SET is_active = 0 WHERE id = ?').run(targetId);
+  res.json({
+    success: true,
+    deactivated: true,
+    note: 'User deactivated (soft-delete). Their history is preserved. Reactivate via PUT /api/users/:id with is_active=true.',
+    activeLeads,
+    pendingFollowUps,
+  });
 });
 
 module.exports = router;
