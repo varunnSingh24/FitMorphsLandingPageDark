@@ -74,9 +74,14 @@ router.get('/funnel', (req, res) => {
   if (date_from) { dateWhere += ' AND date(created_at) >= ?'; params.push(date_from); }
   if (date_to) { dateWhere += ' AND date(created_at) <= ?'; params.push(date_to); }
 
+  // Reminder sub-statuses roll up under 'contacted'
   const stages = ['new', 'contacted', 'interested', 'follow_up', 'negotiation', 'converted', 'lost', 'junk'];
   const data = stages.map(status => {
-    const row = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE status = ? ${dateWhere}`).get(status, ...params);
+    const where = status === 'contacted'
+      ? `status IN ('contacted','contacted_r1','contacted_r2')`
+      : `status = ?`;
+    const queryParams = status === 'contacted' ? params : [status, ...params];
+    const row = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE ${where} ${dateWhere}`).get(...queryParams);
     return { status, count: row.count };
   });
 

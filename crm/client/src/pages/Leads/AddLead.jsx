@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
-const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost'];
+const STATUSES = ['new','contacted','contacted_r1','contacted_r2','interested','follow_up','negotiation','converted','lost'];
 const INTERESTS = ['weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other'];
 const INTEREST_LABELS = { weight_loss:'Weight Loss', muscle_gain:'Muscle Gain', yoga:'Yoga', crossfit:'CrossFit', personal_training:'Personal Training', group_classes:'Group Classes', diet_plan:'Diet Plan', other:'Other' };
 

@@ -55,6 +55,8 @@ export function timeAgo(dateStr) {
 export const STATUS_COLORS = {
   new: 'bg-gray-100 text-gray-700',
   contacted: 'bg-sky-100 text-sky-700',
+  contacted_r1: 'bg-sky-200 text-sky-800',
+  contacted_r2: 'bg-sky-300 text-sky-900',
   interested: 'bg-purple-100 text-purple-700',
   follow_up: 'bg-yellow-100 text-yellow-700',
   negotiation: 'bg-orange-100 text-orange-700',
@@ -100,9 +102,16 @@ export const SOURCE_LABELS = {
 };
 
 export const STATUS_LABELS = {
-  new: 'New', contacted: 'Contacted', interested: 'Interested',
-  follow_up: 'Follow-up', negotiation: 'Negotiation',
-  converted: 'Converted', lost: 'Lost', junk: 'Junk',
+  new: 'New',
+  contacted: 'Contacted — Reminder',
+  contacted_r1: 'Contacted — Reminder 1',
+  contacted_r2: 'Contacted — Reminder 2',
+  interested: 'Interested',
+  follow_up: 'Follow-up',
+  negotiation: 'Negotiation',
+  converted: 'Converted',
+  lost: 'Lost',
+  junk: 'Junk',
 };
 
 export const INTEREST_LABELS = {

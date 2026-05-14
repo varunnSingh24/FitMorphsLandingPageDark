@@ -43,7 +43,7 @@ router.get('/', (req, res) => {
     FROM leads l
     LEFT JOIN users u ON l.assigned_to = u.id
     ${where}
-    ORDER BY l.updated_at DESC
+    ORDER BY l.created_at DESC, l.id DESC
     LIMIT ? OFFSET ?
   `).all(...params, parseInt(limit), offset);
 

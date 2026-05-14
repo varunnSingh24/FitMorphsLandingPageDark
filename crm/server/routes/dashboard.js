@@ -15,14 +15,18 @@ router.get('/stats', (req, res) => {
 
   const total = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause}`).get().c;
   const newToday = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} date(l.created_at) = '${today}'`).get().c;
-  const contacted = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} l.status = 'contacted'`).get().c;
+  // 'contacted' bucket includes the reminder sub-statuses (contacted_r1/r2)
+  const contacted = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} l.status IN ('contacted','contacted_r1','contacted_r2')`).get().c;
   const converted = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} l.status = 'converted'`).get().c;
   const lost = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} l.status = 'lost'`).get().c;
 
-  // Pipeline funnel
+  // Pipeline funnel — reminder sub-statuses roll up under 'contacted'
   const funnelStages = ['new', 'contacted', 'interested', 'follow_up', 'negotiation', 'converted', 'lost', 'junk'];
   const funnel = funnelStages.map(status => {
-    const count = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} l.status = '${status}'`).get().c;
+    const where = status === 'contacted'
+      ? `l.status IN ('contacted','contacted_r1','contacted_r2')`
+      : `l.status = '${status}'`;
+    const count = db.prepare(`SELECT COUNT(*) as c FROM leads l ${whereClause ? whereClause + ' AND' : 'WHERE'} ${where}`).get().c;
     return { status, count };
   });
 
@@ -205,14 +209,19 @@ router.get('/todays-leads', (req, res) => {
     ? `AND l.assigned_to = ${userId}`
     : '';
 
-  // Status breakdown of today's leads
+  // Status breakdown of today's leads — reminder sub-statuses roll up under 'contacted'
   const statuses = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
-  const byStatus = statuses.map(status => ({
-    status,
-    count: db.prepare(
-      `SELECT COUNT(*) as c FROM leads l WHERE date(l.created_at) = ? AND l.status = ? ${userFilter}`
-    ).get(date, status).c
-  }));
+  const byStatus = statuses.map(status => {
+    const where = status === 'contacted'
+      ? `l.status IN ('contacted','contacted_r1','contacted_r2')`
+      : `l.status = '${status}'`;
+    return {
+      status,
+      count: db.prepare(
+        `SELECT COUNT(*) as c FROM leads l WHERE date(l.created_at) = ? AND ${where} ${userFilter}`
+      ).get(date).c,
+    };
+  });
 
   const total = byStatus.reduce((s, r) => s + r.count, 0);
 
@@ -222,7 +231,7 @@ router.get('/todays-leads', (req, res) => {
       u.id, u.name, u.role,
       COUNT(l.id) as total,
       SUM(CASE WHEN l.status = 'new'         THEN 1 ELSE 0 END) as new_count,
-      SUM(CASE WHEN l.status = 'contacted'   THEN 1 ELSE 0 END) as contacted,
+      SUM(CASE WHEN l.status IN ('contacted','contacted_r1','contacted_r2') THEN 1 ELSE 0 END) as contacted,
       SUM(CASE WHEN l.status = 'interested'  THEN 1 ELSE 0 END) as interested,
       SUM(CASE WHEN l.status IN ('follow_up','negotiation') THEN 1 ELSE 0 END) as in_progress,
       SUM(CASE WHEN l.status = 'converted'   THEN 1 ELSE 0 END) as converted,

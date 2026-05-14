@@ -12,7 +12,7 @@ import ScheduleFollowUpModal from '../../components/ScheduleFollowUpModal';
 import ReminderModal from '../../components/ReminderModal';
 import WhatsAppBtn from '../../components/WhatsAppBtn';
 
-const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
+const STATUSES = ['new','contacted','contacted_r1','contacted_r2','interested','follow_up','negotiation','converted','lost','junk'];
 const PIPELINE = ['new','contacted','interested','follow_up','negotiation','converted'];
 
 const HEALTH_CONDITIONS = [
