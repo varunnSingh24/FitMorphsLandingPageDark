@@ -38,7 +38,7 @@ function initializeDatabase() {
       age INTEGER,
       source TEXT,
       source_detail TEXT,
-      status TEXT DEFAULT 'new' CHECK(status IN ('new','contacted','interested','follow_up','negotiation','converted','lost','junk')),
+      status TEXT DEFAULT 'new' CHECK(status IN ('new','contacted','contacted_r1','contacted_r2','interested','follow_up','negotiation','converted','lost','junk')),
       assigned_to INTEGER REFERENCES users(id),
       priority TEXT DEFAULT 'warm' CHECK(priority IN ('hot','warm','cold')),
       interested_in TEXT CHECK(interested_in IN ('weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other')),
@@ -273,6 +273,39 @@ function initializeDatabase() {
       ALTER TABLE leads_new RENAME TO leads;
     `);
     console.log('Migrated leads table: removed hardcoded source CHECK constraint');
+  }
+
+  // Migration: add contacted_r1 / contacted_r2 to leads.status CHECK constraint.
+  // Reminder/Reminder 1/Reminder 2 sub-options track how many times we've contacted a lead.
+  const leadsStatusSchema = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='leads'").get();
+  if (leadsStatusSchema && !leadsStatusSchema.sql.includes('contacted_r1')) {
+    db.exec(`
+      DROP TABLE IF EXISTS leads_status_new;
+      CREATE TABLE leads_status_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT NOT NULL,
+        secondary_phone TEXT,
+        gender TEXT CHECK(gender IN ('male','female','other')),
+        age INTEGER,
+        source TEXT,
+        source_detail TEXT,
+        status TEXT DEFAULT 'new' CHECK(status IN ('new','contacted','contacted_r1','contacted_r2','interested','follow_up','negotiation','converted','lost','junk')),
+        assigned_to INTEGER REFERENCES users(id),
+        priority TEXT DEFAULT 'warm' CHECK(priority IN ('hot','warm','cold')),
+        interested_in TEXT CHECK(interested_in IN ('weight_loss','muscle_gain','yoga','crossfit','personal_training','group_classes','diet_plan','other')),
+        notes TEXT,
+        city TEXT,
+        locality TEXT,
+        created_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes')),
+        updated_at TEXT DEFAULT (datetime('now', '+5 hours', '+30 minutes'))
+      );
+      INSERT INTO leads_status_new SELECT * FROM leads;
+      DROP TABLE leads;
+      ALTER TABLE leads_status_new RENAME TO leads;
+    `);
+    console.log('Migrated leads table: added contacted_r1, contacted_r2 statuses');
   }
 
   // Migration: update CHECK constraint to include dietician role

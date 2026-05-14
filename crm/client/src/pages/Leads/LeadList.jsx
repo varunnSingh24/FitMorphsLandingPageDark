@@ -6,7 +6,7 @@ import { STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS, timeAgo } from '../../ut
 import LogCallModal from '../../components/LogCallModal';
 import WhatsAppBtn, { waLink } from '../../components/WhatsAppBtn';
 
-const STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
+const STATUSES = ['new','contacted','contacted_r1','contacted_r2','interested','follow_up','negotiation','converted','lost','junk'];
 const PRIORITIES = ['hot','warm','cold'];
 const DEFAULT_SOURCES = [
   { key: 'walk_in', label: 'Walk-in' }, { key: 'instagram', label: 'Instagram' },
