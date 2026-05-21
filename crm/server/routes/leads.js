@@ -7,7 +7,7 @@ const { normalizePhone } = require('../utils/phone');
 const router = express.Router();
 router.use(authenticate);
 
-const VALID_STATUSES = ['new','contacted','interested','follow_up','negotiation','converted','lost','junk'];
+const VALID_STATUSES = ['new','contacted','contacted_r1','contacted_r2','interested','follow_up','negotiation','converted','lost','junk'];
 
 // GET /api/leads
 router.get('/', (req, res) => {
