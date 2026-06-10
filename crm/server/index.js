@@ -47,6 +47,7 @@ app.use('/api/bsl',          require('./routes/bsl'));
 app.use('/api/measurements', require('./routes/measurements'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api/chat',      require('./routes/chat'));
+app.use('/api/export',    require('./routes/export'));
 
 // ── Socket.io ──────────────────────────────────────────────────────────────
 const io = new Server(server, {
