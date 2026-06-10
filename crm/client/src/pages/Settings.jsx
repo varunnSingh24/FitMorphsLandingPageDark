@@ -11,6 +11,7 @@ const TABS = [
   { key: 'team', label: 'Team Members', icon: '👥' },
   { key: 'sources', label: 'Lead Sources', icon: '📡' },
   { key: 'programs', label: 'Program Types', icon: '📋' },
+  { key: 'export', label: 'Export Data', icon: '⬇️' },
 ];
 
 export default function Settings() {
@@ -42,6 +43,113 @@ export default function Settings() {
       {tab === 'team' && <TeamSection />}
       {tab === 'sources' && <ConfigListSection settingKey="lead_sources" title="Lead Sources" description="Add or remove sources where leads come from. These appear in the Add Lead and Lead List filters." placeholder="e.g. YouTube Ads" />}
       {tab === 'programs' && <ConfigListSection settingKey="program_types" title="Program Types" description="Define program types for clients. These appear when converting a lead to an active client." placeholder="e.g. 1 Month Trial" />}
+      {tab === 'export' && <ExportSection />}
+    </div>
+  );
+}
+
+// ── Export Data Section ─────────────────────────────────────────────────
+
+const EXPORTS = [
+  { key: 'leads',             label: 'Leads',             desc: 'All leads with assigned agent, call count, last activity, and current status.' },
+  { key: 'clients',           label: 'Clients',           desc: 'All active clients joined with lead info, dietitian, and latest checkin stats.' },
+  { key: 'call-logs',         label: 'Call Logs',         desc: 'Every call logged, with outcome, duration, and which agent made it.' },
+  { key: 'follow-ups',        label: 'Follow-Ups',        desc: 'Scheduled and completed follow-ups across all leads.' },
+  { key: 'activities',        label: 'Activity Log',      desc: 'Full activity timeline — calls, notes, status changes, assignments.' },
+  { key: 'medical-histories', label: 'Medical Histories', desc: 'Lead medical info: conditions, medications, emergency contacts.' },
+  { key: 'checkins',          label: 'Client Check-ins',  desc: 'Dietitian check-in notes with weight, compliance, energy level.' },
+  { key: 'bsl',               label: 'BSL Readings',      desc: 'Blood sugar readings (fasting, PP, random) per client.' },
+  { key: 'hba1c',             label: 'HbA1c Records',     desc: 'HbA1c lab results per client.' },
+  { key: 'measurements',      label: 'Body Measurements', desc: 'Waist, hip, chest, arms, thighs per client over time.' },
+];
+
+function ExportSection() {
+  const [downloading, setDownloading] = useState('');
+
+  const download = async (key) => {
+    setDownloading(key);
+    try {
+      // Use fetch with the JWT so the browser doesn't need to know the token.
+      // Then turn the response into a blob and trigger a download via an anchor.
+      const token = localStorage.getItem('crm_token');
+      const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const base = isDev ? `http://${window.location.hostname}:3001` : window.location.origin;
+      const res = await fetch(`${base}/api/export/${key}.csv`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      // Pull the filename from the Content-Disposition header (set by the server)
+      const cd = res.headers.get('Content-Disposition') || '';
+      const match = cd.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : `${key}.csv`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    } finally {
+      setDownloading('');
+    }
+  };
+
+  const downloadAll = async () => {
+    for (const e of EXPORTS) {
+      // eslint-disable-next-line no-await-in-loop
+      await download(e.key);
+      // tiny pause so the browser actually shows each download
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(r => setTimeout(r, 200));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Export Data</h3>
+            <p className="text-sm text-gray-500 mt-1 max-w-xl">
+              Download CSV snapshots to import into another CRM or feed into an analytics tool.
+              Files are UTF-8 encoded with a BOM so Excel and Google Sheets open Indian names correctly.
+            </p>
+          </div>
+          <button
+            onClick={downloadAll}
+            disabled={!!downloading}
+            className="btn-primary text-sm flex items-center gap-2"
+          >
+            ⬇️ Download All
+          </button>
+        </div>
+      </div>
+
+      <div className="card divide-y divide-gray-100">
+        {EXPORTS.map(e => (
+          <div key={e.key} className="flex items-start justify-between gap-4 p-4">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900">{e.label}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{e.desc}</div>
+            </div>
+            <button
+              onClick={() => download(e.key)}
+              disabled={!!downloading}
+              className="btn-secondary text-xs flex-shrink-0 flex items-center gap-1.5"
+            >
+              {downloading === e.key ? (
+                <><span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> Preparing…</>
+              ) : (
+                <>⬇️ CSV</>
+              )}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
