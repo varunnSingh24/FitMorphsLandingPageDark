@@ -88,7 +88,7 @@ export default function AddLead() {
 
     if (['admin','manager'].includes(user?.role)) {
       api.get('/users').then(r => {
-        setUsers(r.data.users.filter(u => ['sales_agent','manager','dietician'].includes(u.role)));
+        setUsers(r.data.users.filter(u => ['admin','sales_agent','manager','dietician'].includes(u.role)));
       });
     }
   }, [user]);
