@@ -29,7 +29,7 @@ export default function ClientList() {
     loadClients();
     if (['admin', 'manager'].includes(user?.role)) {
       api.get('/users').then(r => {
-        setDietitians(r.data.users.filter(u => ['dietician', 'sales_agent'].includes(u.role)));
+        setDietitians(r.data.users.filter(u => ['admin', 'dietician', 'sales_agent'].includes(u.role)));
       }).catch(() => {});
     }
   }, [user]);

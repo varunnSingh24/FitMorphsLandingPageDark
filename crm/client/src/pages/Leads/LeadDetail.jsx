@@ -348,7 +348,7 @@ export default function LeadDetail() {
               </h2>
               <select className="select text-sm" value={lead.assigned_to || ''} onChange={e => handleAssign(e.target.value)}>
                 <option value="">Unassigned</option>
-                {users.filter(u => ['sales_agent','manager','dietician'].includes(u.role)).map(u => (
+                {users.filter(u => ['admin','sales_agent','manager','dietician'].includes(u.role)).map(u => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
@@ -548,7 +548,7 @@ export default function LeadDetail() {
                 <label className="label">Assign Dietitian</label>
                 <select className="select" value={convertForm.dietitian_id} onChange={e => setConvertForm(f => ({ ...f, dietitian_id: e.target.value }))}>
                   <option value="">Select dietitian (optional)</option>
-                  {users.filter(u => u.role === 'dietician').map(u => (
+                  {users.filter(u => ['admin','dietician'].includes(u.role)).map(u => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>

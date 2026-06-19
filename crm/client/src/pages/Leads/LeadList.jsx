@@ -155,7 +155,7 @@ export default function LeadList() {
           {['admin', 'manager'].includes(user?.role) && (
             <select className="select" value={filters.assigned_to} onChange={e => setFilter('assigned_to', e.target.value)}>
               <option value="">All Agents</option>
-              {users.filter(u => u.role !== 'admin').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           )}
         </div>
@@ -174,7 +174,7 @@ export default function LeadList() {
           <span className="text-sky-700 text-sm font-medium">{selected.length} selected</span>
           <select className="select w-48 text-sm py-1" value={bulkAssignTo} onChange={e => setBulkAssignTo(e.target.value)}>
             <option value="">Assign to agent...</option>
-            {users.filter(u => ['sales_agent','manager','dietician'].includes(u.role)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            {users.filter(u => ['admin','sales_agent','manager','dietician'].includes(u.role)).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
           <button className="btn-primary text-xs py-1.5" onClick={handleBulkAssign} disabled={!bulkAssignTo}>Assign</button>
           <button className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700" onClick={handleBulkDelete}>Delete</button>
